@@ -15,7 +15,9 @@ import {
   TableEntryType,
 } from '../../components/component_kit/cw_table';
 import User from '../../components/widgets/user';
-import getDelegationData, { GovernanceStandard } from 'server/routes/getDelegationData';
+import getDelegationData, {
+  GovernanceStandard,
+} from 'server/routes/getDelegationData';
 import ProfilesController from '../../../controllers/server/profiles';
 import { chain } from 'lodash';
 import { ChainNetwork } from 'shared/types';
@@ -42,30 +44,27 @@ export type DelegateInfo = {
   };
 };
 
-
-async function processDelegates(): Promise<[DelegateInfo, DelegateInfo[]]>{
-
+async function processDelegates(): Promise<{
+  delegate: DelegateInfo;
+  delegates: DelegateInfo[];
+}> {
   // determine which governance standard being used by this community
-  let standard : GovernanceStandard;
-  if(app.chain.network === ChainNetwork.Aave) {
+  let standard: GovernanceStandard;
+  if (app.chain.network === ChainNetwork.Aave) {
     standard = GovernanceStandard.Aave;
-  }
-  else if(app.chain.network === ChainNetwork.Compound) {
+  } else if (app.chain.network === ChainNetwork.Compound) {
     standard = GovernanceStandard.Compound;
-  }
-  else {
+  } else {
     standard = GovernanceStandard.ERC20Votes;
   }
 
   const response = await $.get(`${app.serverUrl()}/getDelegationData`, {
     delegation_standard: standard,
-    chain: app.chain
+    chain: app.chain,
   });
   if (response.status !== 'Success') {
     throw new Error(`Cannot fetch events: ${response.status}`);
   }
-
-
 
   // Specifies number of votes per delegate
   let delegateWeighting: Map<string, number> = new Map();
@@ -76,59 +75,55 @@ async function processDelegates(): Promise<[DelegateInfo, DelegateInfo[]]>{
   // TODO extract data from other events
   let totalVotesCast = 0;
 
-
   response.result.map((rawEvent) => {
-    const {
-      chain_event_type_id,
-      event_data,
-    } = rawEvent;
+    const { chain_event_type_id, event_data } = rawEvent;
     // some simple string manipulation likely needs to be done here for the chain_event_type_id.
     const eventType = chain_event_type_id;
     const eventData = event_data;
 
-    switch(standard) {
+    switch (standard) {
       case GovernanceStandard.ERC20Votes:
-        switch(eventType) {
-          case "delegate-votes-changed":
+        switch (eventType) {
+          case 'delegate-votes-changed':
             delegateWeighting[eventData.delegate] = eventData.newBalance;
-            totalVotesCast += (eventData.newBalance - eventData.oldBalance);
+            totalVotesCast += eventData.newBalance - eventData.oldBalance;
             break;
-          case "delegate-changed":
+          case 'delegate-changed':
             break;
           default:
             break;
         }
         break;
       case GovernanceStandard.Compound:
-        switch(eventType) {
-          case "proposal-created":
+        switch (eventType) {
+          case 'proposal-created':
             break;
-          case "vote-cast":
-            // delegateWeighting[eventData.eventData.votes] = 
+          case 'vote-cast':
+            // delegateWeighting[eventData.eventData.votes] =
             break;
-          case "proposal-canceled":
+          case 'proposal-canceled':
             break;
-          case "proposal-queued":
+          case 'proposal-queued':
             break;
-          case "proposal-executed":
+          case 'proposal-executed':
             break;
-          case "delegated-power-changed":
+          case 'delegated-power-changed':
             break;
           default:
             break;
         }
         break;
       case GovernanceStandard.Aave:
-        switch(eventType) {
-          case "vote-emitted":
+        switch (eventType) {
+          case 'vote-emitted':
             break;
-          case "proposal-created":
+          case 'proposal-created':
             break;
-          case "proposal-queued":
+          case 'proposal-queued':
             break;
-          case "delegate-changed":
+          case 'delegate-changed':
             break;
-          case "delegated-power-changed":
+          case 'delegated-power-changed':
             break;
           default:
             break;
@@ -141,36 +136,47 @@ async function processDelegates(): Promise<[DelegateInfo, DelegateInfo[]]>{
     return rawEvent;
   });
 
-  const prof : ProfilesController = new ProfilesController();
+  const prof: ProfilesController = new ProfilesController();
 
   // rank-order addresses by total votes:
-  const rankOrderedMap = new Map([...delegateWeighting.entries()].sort((a,b)=>b[1]-a[1]));
-  let allDelegates : DelegateInfo[];
+  const rankOrderedMap = new Map(
+    [...delegateWeighting.entries()].sort((a, b) => b[1] - a[1])
+  );
+  let allDelegates: DelegateInfo[];
 
-  let delegateOfUser : DelegateInfo = null;
+  let delegateOfUser: DelegateInfo = null;
 
   // Once this table is built (and rank-ordered), create DelegateInfo cards
   let rank = 1;
-  for(let address of delegateWeighting.keys()) {
+  for (let address of rankOrderedMap.keys()) {
     let delegateAddress = address;
-    let delegate : Profile = prof.getProfile(chain.name, delegateAddress);
-    let delegateName : string = delegate.name;
+    let delegate: Profile = prof.getProfile(chain.name, delegateAddress);
+    let delegateName: string = delegate.name;
     let totalVotes = delegateWeighting[address];
-    let voteWeight = parseFloat((totalVotes / totalVotesCast).toFixed(2)); 
+    let voteWeight = parseFloat((totalVotes / totalVotesCast).toFixed(2));
     // TODO fix proposals
     let proposals = 0;
 
     // push current delegate information
-    var newDelegateInfo : DelegateInfo = {delegate, delegateAddress, delegateName, voteWeight, totalVotes, proposals, rank};
+    var newDelegateInfo: DelegateInfo = {
+      delegate,
+      delegateAddress,
+      delegateName,
+      voteWeight,
+      totalVotes,
+      proposals,
+      rank,
+      recentProposal: null,
+    };
     allDelegates.push(newDelegateInfo);
 
     // check to see if our user has delegated to this particular address.
-    if(delegateMap[app.user.activeAccount.address] == address) {
+    if (delegateMap[app.user.activeAccount.address] == address) {
       delegateOfUser = newDelegateInfo;
     }
-    rank += 1
+    rank += 1;
   }
-  return [delegateOfUser, allDelegates]
+  return { delegate: delegateOfUser, delegates: allDelegates };
 }
 
 function buildTableData(
@@ -180,7 +186,8 @@ function buildTableData(
   updateSelectedDelegate: (
     delegate: DelegateInfo | null,
     action: string
-  ) => Promise<void>
+  ) => Promise<void>,
+  standard: GovernanceStandard
 ): Array<Array<TableEntry>> {
   const result = [];
 
@@ -198,10 +205,9 @@ function buildTableData(
 
     let controller;
 
-    if(standard == GovernanceStandard.Aave) {
+    if (standard === GovernanceStandard.Aave) {
       controller = new AaveChain(app);
-    }
-    else {
+    } else {
       controller = new CompoundChain(app);
     }
     controller.init(app.chain.meta);
@@ -276,9 +282,15 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
   private delegates: Array<DelegateInfo>;
   private filteredDelegateInfo: Array<Array<TableEntry>>;
   private tableRendered: boolean;
-  oninit() {
+  async oninit() {
     // TODO: Replace below with processDelegates() call
-    [this.delegate, this.delegates] = processDelegates();
+    try {
+      const { delegate, delegates } = await processDelegates();
+      this.delegate = delegate;
+      this.delegates = delegates;
+    } catch (e) {
+      console.log(e);
+    }
   }
   view() {
     const updateSelectedDelegate = async (
@@ -303,7 +315,8 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
         this.delegates,
         this.delegate,
         value,
-        updateSelectedDelegate
+        updateSelectedDelegate,
+        null
       );
       m.redraw();
     };
@@ -313,7 +326,8 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
         this.delegates,
         this.delegate,
         '',
-        updateSelectedDelegate
+        updateSelectedDelegate,
+        null
       );
       this.tableRendered = true;
     }
