@@ -3,6 +3,7 @@
 import m from 'mithril';
 import numeral from 'numeral';
 import _ from 'lodash';
+import $ from 'jquery';
 
 import 'pages/delegation/index.scss';
 
@@ -15,17 +16,21 @@ import {
   TableEntryType,
 } from '../../components/component_kit/cw_table';
 import User from '../../components/widgets/user';
-import getDelegationData, {
-  GovernanceStandard,
-} from 'server/routes/getDelegationData';
 import ProfilesController from '../../../controllers/server/profiles';
 import { chain } from 'lodash';
-import { ChainNetwork } from 'shared/types';
-import CompoundChain from 'client/scripts/controllers/chain/ethereum/compound/chain';
-import AaveChain from 'client/scripts/controllers/chain/ethereum/aave/chain';
+import { ChainNetwork } from 'types';
+import AaveChain from '../../../controllers/chain/ethereum/aave/chain';
 import DelegateCard from './delegate_card';
 import Sublayout from '../../sublayout';
-import { ViewController } from '@magic-sdk/provider';
+import CompoundChain from '../../../controllers/chain/ethereum/compound/chain';
+import { ChainEntityInstance } from 'server/models/chain_entity';
+import { ChainEventAttributes } from 'server/models/chain_event';
+
+enum GovernanceStandard {
+  ERC20Votes = 'ERC20Votes',
+  Compound = 'Compound',
+  Aave = 'Aave',
+}
 
 type DelegationPageAttrs = { topic?: string };
 
@@ -50,18 +55,25 @@ async function processDelegates(): Promise<{
 }> {
   // determine which governance standard being used by this community
   let standard: GovernanceStandard;
-  if (app.chain.network === ChainNetwork.Aave) {
+  if (app.chain?.network === ChainNetwork.Aave) {
     standard = GovernanceStandard.Aave;
-  } else if (app.chain.network === ChainNetwork.Compound) {
+  } else if (app.chain?.network === ChainNetwork.Compound) {
     standard = GovernanceStandard.Compound;
   } else {
     standard = GovernanceStandard.ERC20Votes;
   }
 
-  const response = await $.get(`${app.serverUrl()}/getDelegationData`, {
-    delegation_standard: standard,
-    chain: app.chain,
-  });
+  let response;
+  try {
+    response = await $.get(`${app.serverUrl()}/getDelegationData`, {
+      delegation_standard: standard,
+      chain: app.activeChainId(),
+      jwt: app.user.jwt,
+    });
+  } catch (e) {
+    console.log(e);
+  }
+
   if (response.status !== 'Success') {
     throw new Error(`Cannot fetch events: ${response.status}`);
   }
@@ -75,10 +87,13 @@ async function processDelegates(): Promise<{
   // TODO extract data from other events
   let totalVotesCast = 0;
 
-  response.result.map((rawEvent) => {
+  response.result.map((rawEvent: ChainEventAttributes) => {
     const { chain_event_type_id, event_data } = rawEvent;
     // some simple string manipulation likely needs to be done here for the chain_event_type_id.
-    const eventType = chain_event_type_id;
+    const eventType = chain_event_type_id.slice(
+      chain_event_type_id.indexOf('-') + 1,
+      chain_event_type_id.length
+    );
     const eventData = event_data;
 
     switch (standard) {
@@ -142,7 +157,7 @@ async function processDelegates(): Promise<{
   const rankOrderedMap = new Map(
     [...delegateWeighting.entries()].sort((a, b) => b[1] - a[1])
   );
-  let allDelegates: DelegateInfo[];
+  let allDelegates: DelegateInfo[] = [];
 
   let delegateOfUser: DelegateInfo = null;
 
@@ -176,6 +191,7 @@ async function processDelegates(): Promise<{
     }
     rank += 1;
   }
+  console.log('delegate:', allDelegates);
   return { delegate: delegateOfUser, delegates: allDelegates };
 }
 
@@ -284,23 +300,23 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
   private tableRendered: boolean;
   async oninit() {
     // TODO: Replace below with processDelegates() call
-    try {
-      const { delegate, delegates } = await processDelegates();
-      this.delegate = delegate;
-      this.delegates = delegates;
-    } catch (e) {
-      console.log(e);
-    }
   }
   view() {
-    const updateSelectedDelegate = async (
+    if (!this.delegate && !this.delegates) {
+      processDelegates().then(({ delegate, delegates }) => {
+        this.delegate = delegate;
+        this.delegates = delegates;
+        this.tableRendered = false;
+      });
+    }
+    /* const updateSelectedDelegate = async (
       delegate: DelegateInfo,
       action: string
     ) => {
       if (action === 'update') {
         this.delegate = delegate;
         // TODO: Call the controllers with setDelegate()
-        controller.setDelegate(delegate.delegateAddress);
+        //controller.setDelegate(delegate.delegateAddress);
       } else if (action === 'remove') {
         this.delegate = null;
         // TODO: Call the controllers with removeDelegate()
@@ -321,7 +337,7 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
       m.redraw();
     };
 
-    if (!this.tableRendered) {
+    if (this.tableRendered === false) {
       this.filteredDelegateInfo = buildTableData(
         this.delegates,
         this.delegate,
@@ -330,11 +346,11 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
         null
       );
       this.tableRendered = true;
-    }
+    } */
 
     return (
       <Sublayout title="Delegation">
-        <div class="top-section">
+        {/* <div class="top-section">
           {this.delegate ? (
             <div class="wrapper">
               <div class="header">Delegates</div>
@@ -397,7 +413,7 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
               data={this.filteredDelegateInfo}
             />
           </div>
-        </div>
+        </div> */}
       </Sublayout>
     );
   }
