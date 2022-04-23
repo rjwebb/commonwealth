@@ -25,11 +25,14 @@ import Sublayout from '../../sublayout';
 import CompoundChain from '../../../controllers/chain/ethereum/compound/chain';
 import { ChainEntityInstance } from 'server/models/chain_entity';
 import { ChainEventAttributes } from 'server/models/chain_event';
+import { CompoundTypes, AaveTypes } from '@commonwealth/chain-events';
+import { GovernanceStandard } from 'server/routes/getDelegationData';
 
-enum GovernanceStandard {
-  ERC20Votes = 'ERC20Votes',
-  Compound = 'Compound',
-  Aave = 'Aave',
+type Proposal = {
+  id: number,
+  proposalText?: string;
+  outcome?: boolean; // true if they voted with majority?
+  proposalLink?: string; // url of the proposal on CW
 }
 
 type DelegationPageAttrs = { topic?: string };
@@ -42,26 +45,13 @@ export type DelegateInfo = {
   totalVotes: number;
   proposals: number;
   rank: number;
-  recentProposal: {
-    proposalText: string;
-    outcome: boolean; // true if they voted with majority?
-    proposalLink: string; // url of the proposal on CW
-  };
+  recentProposal: Proposal;
 };
 
-async function processDelegates(): Promise<{
+async function processDelegates(standard: GovernanceStandard): Promise<{
   delegate: DelegateInfo;
   delegates: DelegateInfo[];
 }> {
-  // determine which governance standard being used by this community
-  let standard: GovernanceStandard;
-  if (app.chain?.network === ChainNetwork.Aave) {
-    standard = GovernanceStandard.Aave;
-  } else if (app.chain?.network === ChainNetwork.Compound) {
-    standard = GovernanceStandard.Compound;
-  } else {
-    standard = GovernanceStandard.ERC20Votes;
-  }
 
   let response;
   try {
@@ -83,8 +73,14 @@ async function processDelegates(): Promise<{
 
   // Specifies which address each user is delegating votes to
   let delegateMap: Map<string, string> = new Map();
+  
+  // mapping from proposal index to proposal object
+  let proposalMap: Map<number, Proposal>;
 
-  // TODO extract data from other events
+  // mapping from delegate address to indices of voted proposals,
+  // most recent proposals, and vote direction
+  let proposalVotes: Map<number, {Map, number}>
+
   let totalVotesCast = 0;
 
   response.result.map((rawEvent: ChainEventAttributes) => {
@@ -97,32 +93,46 @@ async function processDelegates(): Promise<{
     const eventData = event_data;
 
     switch (standard) {
+      /*
       case GovernanceStandard.ERC20Votes:
         switch (eventType) {
-          case 'delegate-votes-changed':
+          case 'delegated-votes-changed':
             delegateWeighting[eventData.delegate] = eventData.newBalance;
             totalVotesCast += eventData.newBalance - eventData.oldBalance;
             break;
           case 'delegate-changed':
+            delegateMap[eventData.delegator] = eventData.toDelegate;
             break;
+          case 'proposal-created'
           default:
             break;
         }
         break;
+      */
       case GovernanceStandard.Compound:
         switch (eventType) {
-          case 'proposal-created':
+          case CompoundTypes.EventKind.ProposalCreated:
+            let proposer : String = eventData.proposer;
+            let id = eventData.id;
+            let description = eventData.description;
+            // TODO get CW link of proposal
+            let newProposal: Proposal = {id: id, proposalText: description};
+            proposalMap[id] = newProposal;
             break;
-          case 'vote-cast':
-            // delegateWeighting[eventData.eventData.votes] =
+          case CompoundTypes.EventKind.ProposalQueued:
+            proposalMap[eventData.id].outcome = true;
+          case CompoundTypes.EventKind.ProposalCanceled:
             break;
-          case 'proposal-canceled':
-            break;
-          case 'proposal-queued':
-            break;
-          case 'proposal-executed':
-            break;
+          case CompoundTypes.EventKind.VoteCast:
+            proposalVotes[eventData.voter][0][eventData.id] = eventData.support;
+            proposalVotes[eventData.voter][1] = eventData.id;
+            // TODO remove string once chain-events changes are merged
           case 'delegated-power-changed':
+            delegateWeighting[eventData.user] = eventData.amount;
+            totalVotesCast += eventData.newBalance - eventData.oldBalance;
+            break;
+          case 'delegate-changed':
+            delegateMap[eventData.delegator] = eventData.toDelegate;
             break;
           default:
             break;
@@ -130,16 +140,31 @@ async function processDelegates(): Promise<{
         break;
       case GovernanceStandard.Aave:
         switch (eventType) {
-          case 'vote-emitted':
+          case AaveTypes.EventKind.ProposalCreated:
+            let proposer : String = eventData.proposer;
+            let id = eventData.id;
+            // TODO description not contained in events
+            // TODO get CW link of proposal
+            let newProposal: Proposal = {id: id};
+            proposalMap[id] = newProposal;
             break;
-          case 'proposal-created':
+          case AaveTypes.EventKind.ProposalQueued:
+            proposalMap[eventData.id].outcome = true;
             break;
-          case 'proposal-queued':
+          case AaveTypes.EventKind.DelegateChanged:
+            // check if delegating voting power specifically
+            if(eventData.type == 0) {
+              delegateMap[eventData.delegator] = eventData.delegatee;
+            }
             break;
-          case 'delegate-changed':
+          case AaveTypes.EventKind.DelegatedPowerChanged:
+            if(eventData.type == 0) {
+              delegateMap[eventData.delegator] = eventData.delegatee;
+            }
             break;
-          case 'delegated-power-changed':
-            break;
+          case AaveTypes.EventKind.VoteEmitted:
+            proposalVotes[eventData.voter][0][eventData.id] = eventData.support;
+            proposalVotes[eventData.voter][1] = eventData.id;
           default:
             break;
         }
@@ -147,7 +172,6 @@ async function processDelegates(): Promise<{
       default:
         break;
     }
-    // return is useless, since this isn't used again.
     return rawEvent;
   });
 
@@ -158,7 +182,6 @@ async function processDelegates(): Promise<{
     [...delegateWeighting.entries()].sort((a, b) => b[1] - a[1])
   );
   let allDelegates: DelegateInfo[] = [];
-
   let delegateOfUser: DelegateInfo = null;
 
   // Once this table is built (and rank-ordered), create DelegateInfo cards
@@ -169,8 +192,9 @@ async function processDelegates(): Promise<{
     let delegateName: string = delegate.name;
     let totalVotes = delegateWeighting[address];
     let voteWeight = parseFloat((totalVotes / totalVotesCast).toFixed(2));
-    // TODO fix proposals
-    let proposals = 0;
+
+    let proposals = proposalVotes[delegateAddress][0].size;
+    let recentProposal = proposalVotes[delegateAddress][1];
 
     // push current delegate information
     var newDelegateInfo: DelegateInfo = {
@@ -181,7 +205,7 @@ async function processDelegates(): Promise<{
       totalVotes,
       proposals,
       rank,
-      recentProposal: null,
+      recentProposal,
     };
     allDelegates.push(newDelegateInfo);
 
@@ -219,14 +243,6 @@ function buildTableData(
       recentProposal,
     } = delegateInfo;
 
-    let controller;
-
-    if (standard === GovernanceStandard.Aave) {
-      controller = new AaveChain(app);
-    } else {
-      controller = new CompoundChain(app);
-    }
-    controller.init(app.chain.meta);
 
     const isSelectedDelegate = _.isEqual(delegateInfo, currentDelegate);
 
@@ -298,29 +314,44 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
   private delegates: Array<DelegateInfo>;
   private filteredDelegateInfo: Array<Array<TableEntry>>;
   private tableRendered: boolean;
+  private controller: AaveChain | CompoundChain;
+  private standard: GovernanceStandard;
+
   async oninit() {
+    // determine which governance standard being used by this community
+    if (app.chain?.network === ChainNetwork.Aave) {
+      this.standard = GovernanceStandard.Aave;
+    } else if (app.chain?.network === ChainNetwork.Compound) {
+      this.standard = GovernanceStandard.Compound;
+    } else {
+      this.standard = GovernanceStandard.ERC20Votes;
+    }
+    if (this.standard === GovernanceStandard.Aave) {
+      this.controller = new AaveChain(app);
+    } else {
+      this.controller = new CompoundChain(app);
+    }
+    this.controller.init(app.chain.meta);
     // TODO: Replace below with processDelegates() call
   }
   view() {
     if (!this.delegate && !this.delegates) {
-      processDelegates().then(({ delegate, delegates }) => {
+      processDelegates(this.standard).then(({ delegate, delegates }) => {
         this.delegate = delegate;
         this.delegates = delegates;
         this.tableRendered = false;
       });
     }
-    /* const updateSelectedDelegate = async (
+    const updateSelectedDelegate = async (
       delegate: DelegateInfo,
       action: string
     ) => {
       if (action === 'update') {
         this.delegate = delegate;
-        // TODO: Call the controllers with setDelegate()
-        //controller.setDelegate(delegate.delegateAddress);
       } else if (action === 'remove') {
         this.delegate = null;
-        // TODO: Call the controllers with removeDelegate()
       }
+      this.controller.setDelegate(delegate.delegateAddress);
       this.tableRendered = false;
       m.redraw();
     };
@@ -346,7 +377,7 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
         null
       );
       this.tableRendered = true;
-    } */
+    } 
 
     return (
       <Sublayout title="Delegation">

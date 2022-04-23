@@ -10,6 +10,7 @@ import {
   TypedRequestBody,
 } from '../types';
 import { NextFunction } from 'express';
+import { CompoundTypes, AaveTypes } from '@commonwealth/chain-events';
 
 export const Errors = {
   InvalidEvent: 'Invalid event',
@@ -46,7 +47,6 @@ const getDelegationData = async (
 
   try {
     // determine which set of events to query:
-    // chainEventId = ${chain}-${event.data.kind.toString()}
     let chainEventIds: string[] = [];
     switch (req.query.delegation_standard) {
       case GovernanceStandard.ERC20Votes:
@@ -59,17 +59,18 @@ const getDelegationData = async (
           'proposal-canceled',
           'proposal-queued',
           'vote-cast',
+          'delegate-changed',
+          'delegate-votes-changed'
         ];
         break;
       case GovernanceStandard.Aave:
+        // TODO how many of these are actually necessary? 
         chainEventIds = [
-          'proposal-canceled',
-          'proposal-created',
-          'proposal-executed',
-          'proposal-queued',
-          'vote-emitted',
-          'delegate-changed',
-          'delegate-power-changed',
+          AaveTypes.EventKind.ProposalCreated,
+          AaveTypes.EventKind.DelegateChanged,
+          AaveTypes.EventKind.DelegatedPowerChanged,
+          AaveTypes.EventKind.ProposalQueued,
+          AaveTypes.EventKind.ProposalCanceled
         ];
         break;
       default:
