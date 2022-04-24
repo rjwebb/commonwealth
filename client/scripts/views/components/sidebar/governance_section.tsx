@@ -109,6 +109,9 @@ export class GovernanceSection
       app.chain?.network !== ChainNetwork.Kulupu &&
       app.chain?.network !== ChainNetwork.Darwinia;
 
+    // TODO: Are these the only options??
+    const showDelegation = showCompoundOptions || showAaveOptions;
+
     // ---------- Build Toggle Tree ---------- //
     const governanceDefaultToggleTree: ToggleTree = {
       toggledState: true,
@@ -167,6 +170,12 @@ export class GovernanceSection
         }),
         ...(showValidators && {
           Validators: {
+            toggledState: false,
+            children: {},
+          },
+        }),
+        ...(showDelegation && {
+          Delegation: {
             toggledState: false,
             children: {},
           },
@@ -411,6 +420,7 @@ export class GovernanceSection
     };
 
     // Delegate
+    // TODO: Should this be removed in leiu of the new delegation page? Or is this a different thing entirely
     const delegateData: SectionGroupAttrs = {
       title: 'Delegate',
       containsChildren: false,
@@ -428,6 +438,23 @@ export class GovernanceSection
       displayData: null,
     };
 
+    const delegationData: SectionGroupAttrs = {
+      title: 'Delegation',
+      containsChildren: false,
+      hasDefaultToggle: showDelegation
+        ? toggleTreeState['children']['Delegation']['toggledState']
+        : false,
+      isVisible: showDelegation,
+      isUpdated: true,
+      isActive: m.route.get() === `/${app.activeChainId()}/delegation`,
+      onclick: (e, toggle: boolean) => {
+        e.preventDefault();
+        setGovernanceToggleTree('children.Delegation.toggledState', toggle);
+        navigateToSubpage('/delegation');
+      },
+      displayData: null,
+    };
+
     const governanceGroupData: SectionGroupAttrs[] = [
       membersData,
       snapshotData,
@@ -439,6 +466,7 @@ export class GovernanceSection
       tipsData,
       councillorsData,
       validatorsData,
+      delegationData,
     ];
 
     const sidebarSectionData: SidebarSectionAttrs = {

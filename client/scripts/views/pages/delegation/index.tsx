@@ -26,14 +26,19 @@ import CompoundChain from '../../../controllers/chain/ethereum/compound/chain';
 import { ChainEntityInstance } from 'server/models/chain_entity';
 import { ChainEventAttributes } from 'server/models/chain_event';
 import { CompoundTypes, AaveTypes } from '@commonwealth/chain-events';
-import { GovernanceStandard } from 'server/routes/getDelegationData';
+
+export enum GovernanceStandard {
+  ERC20Votes = 'ERC20Votes',
+  Compound = 'Compound',
+  Aave = 'Aave',
+}
 
 type Proposal = {
-  id: number,
+  id: number;
   proposalText?: string;
   outcome?: boolean; // true if they voted with majority?
   proposalLink?: string; // url of the proposal on CW
-}
+};
 
 type DelegationPageAttrs = { topic?: string };
 
@@ -52,7 +57,6 @@ async function processDelegates(standard: GovernanceStandard): Promise<{
   delegate: DelegateInfo;
   delegates: DelegateInfo[];
 }> {
-
   let response;
   try {
     response = await $.get(`${app.serverUrl()}/getDelegationData`, {
@@ -60,12 +64,11 @@ async function processDelegates(standard: GovernanceStandard): Promise<{
       chain: app.activeChainId(),
       jwt: app.user.jwt,
     });
+    if (response.status !== 'Success') {
+      throw new Error(`Cannot fetch events: ${response.status}`);
+    }
   } catch (e) {
     console.log(e);
-  }
-
-  if (response.status !== 'Success') {
-    throw new Error(`Cannot fetch events: ${response.status}`);
   }
 
   // Specifies number of votes per delegate
@@ -73,13 +76,13 @@ async function processDelegates(standard: GovernanceStandard): Promise<{
 
   // Specifies which address each user is delegating votes to
   let delegateMap: Map<string, string> = new Map();
-  
+
   // mapping from proposal index to proposal object
   let proposalMap: Map<number, Proposal>;
 
   // mapping from delegate address to indices of voted proposals,
   // most recent proposals, and vote direction
-  let proposalVotes: Map<number, {Map, number}>
+  let proposalVotes: Map<number, { Map; number }>;
 
   let totalVotesCast = 0;
 
@@ -112,11 +115,11 @@ async function processDelegates(standard: GovernanceStandard): Promise<{
       case GovernanceStandard.Compound:
         switch (eventType) {
           case CompoundTypes.EventKind.ProposalCreated:
-            let proposer : String = eventData.proposer;
+            let proposer: String = eventData.proposer;
             let id = eventData.id;
             let description = eventData.description;
             // TODO get CW link of proposal
-            let newProposal: Proposal = {id: id, proposalText: description};
+            let newProposal: Proposal = { id: id, proposalText: description };
             proposalMap[id] = newProposal;
             break;
           case CompoundTypes.EventKind.ProposalQueued:
@@ -126,7 +129,7 @@ async function processDelegates(standard: GovernanceStandard): Promise<{
           case CompoundTypes.EventKind.VoteCast:
             proposalVotes[eventData.voter][0][eventData.id] = eventData.support;
             proposalVotes[eventData.voter][1] = eventData.id;
-            // TODO remove string once chain-events changes are merged
+          // TODO remove string once chain-events changes are merged
           case 'delegated-power-changed':
             delegateWeighting[eventData.user] = eventData.amount;
             totalVotesCast += eventData.newBalance - eventData.oldBalance;
@@ -141,11 +144,11 @@ async function processDelegates(standard: GovernanceStandard): Promise<{
       case GovernanceStandard.Aave:
         switch (eventType) {
           case AaveTypes.EventKind.ProposalCreated:
-            let proposer : String = eventData.proposer;
+            let proposer: String = eventData.proposer;
             let id = eventData.id;
             // TODO description not contained in events
             // TODO get CW link of proposal
-            let newProposal: Proposal = {id: id};
+            let newProposal: Proposal = { id: id };
             proposalMap[id] = newProposal;
             break;
           case AaveTypes.EventKind.ProposalQueued:
@@ -153,12 +156,12 @@ async function processDelegates(standard: GovernanceStandard): Promise<{
             break;
           case AaveTypes.EventKind.DelegateChanged:
             // check if delegating voting power specifically
-            if(eventData.type == 0) {
+            if (eventData.type == 0) {
               delegateMap[eventData.delegator] = eventData.delegatee;
             }
             break;
           case AaveTypes.EventKind.DelegatedPowerChanged:
-            if(eventData.type == 0) {
+            if (eventData.type == 0) {
               delegateMap[eventData.delegator] = eventData.delegatee;
             }
             break;
@@ -242,7 +245,6 @@ function buildTableData(
       rank,
       recentProposal,
     } = delegateInfo;
-
 
     const isSelectedDelegate = _.isEqual(delegateInfo, currentDelegate);
 
@@ -332,7 +334,6 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
       this.controller = new CompoundChain(app);
     }
     this.controller.init(app.chain.meta);
-    // TODO: Replace below with processDelegates() call
   }
   view() {
     if (!this.delegate && !this.delegates) {
@@ -377,7 +378,7 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
         null
       );
       this.tableRendered = true;
-    } 
+    }
 
     return (
       <Sublayout title="Delegation">
