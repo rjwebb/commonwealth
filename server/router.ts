@@ -123,6 +123,7 @@ import updateAddress from './routes/updateAddress';
 import { DB } from './database';
 import { sendMessage } from './routes/snapshotAPI';
 import ipfsPin from './routes/ipfsPin';
+import setAddressWallet from './routes/setAddressWallet';
 
 function setupRouter(
   app: Express,
@@ -216,7 +217,10 @@ function setupRouter(
     starCommunity.bind(this, models)
   );
 
-  router.post('/tokenBalance', tokenBalance.bind(this, models, tokenBalanceCache));
+  router.post(
+    '/tokenBalance',
+    tokenBalance.bind(this, models, tokenBalanceCache)
+  );
   router.get('/getTokensFromLists', getTokensFromLists.bind(this, models));
   router.get('/getTokenForum', getTokenForum.bind(this, models));
   router.get(
@@ -573,6 +577,11 @@ function setupRouter(
     passport.authenticate('jwt', { session: false }),
     getDelegationData.bind(this, models)
   );
+  router.post(
+    '/setAddressWallet',
+    passport.authenticate('jwt', { session: false }),
+    setAddressWallet.bind(this, models)
+  );
 
   // chain categories
   router.post(
@@ -620,7 +629,7 @@ function setupRouter(
   router.post(
     '/auth/sso/callback',
     // passport.authenticate('jwt', { session: false }),
-    finishSsoLogin.bind(this, models),
+    finishSsoLogin.bind(this, models)
   );
 
   // logout
