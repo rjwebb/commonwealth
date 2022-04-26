@@ -138,7 +138,7 @@ class DelegateCard implements m.ClassComponent<DelegateCardAttrs> {
           <div class="bottom-section">
             <div class="latest">Latest Proposal: </div>
             <div class="recent-proposal-text">
-              {vnode.attrs.delegateInfo.recentProposal.proposalText}
+              {vnode.attrs.delegateInfo.recentProposal?.proposalText}
             </div>
             {
               // TODO: Insert arrow icon here when its implemented
@@ -146,12 +146,12 @@ class DelegateCard implements m.ClassComponent<DelegateCardAttrs> {
             <div class="voted">Voted: </div>
             <div
               class={
-                vnode.attrs.delegateInfo.recentProposal.outcome
+                vnode.attrs.delegateInfo.recentProposal?.outcome
                   ? 'passed'
                   : 'not-passed'
               }
             >
-              {vnode.attrs.delegateInfo.recentProposal.outcome
+              {vnode.attrs.delegateInfo.recentProposal?.outcome
                 ? 'PASSED'
                 : 'NOT PASSED'}
             </div>

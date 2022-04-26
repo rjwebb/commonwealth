@@ -39,9 +39,11 @@ export class CWTable implements m.ClassComponent<TableAttrs> {
   }
 
   view(vnode) {
-    for (const data of vnode.attrs.data) {
-      if (data.length !== vnode.attrs.columns.length) {
-        this.dataMatches = false; // Enforce data matches expected columns
+    if (vnode.attrs.data?.length > 0) {
+      for (const data of vnode.attrs.data) {
+        if (data.length !== vnode.attrs.columns.length) {
+          this.dataMatches = false; // Enforce data matches expected columns
+        }
       }
     }
 

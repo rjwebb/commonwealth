@@ -26,6 +26,7 @@ import CompoundChain from '../../../controllers/chain/ethereum/compound/chain';
 import { ChainEntityInstance } from 'server/models/chain_entity';
 import { ChainEventAttributes } from 'server/models/chain_event';
 import { CompoundTypes, AaveTypes } from '@commonwealth/chain-events';
+import { decodeAddress } from '@polkadot/util-crypto';
 
 export enum GovernanceStandard {
   ERC20Votes = 'ERC20Votes',
@@ -232,7 +233,7 @@ function buildTableData(
   ) => Promise<void>,
   standard: GovernanceStandard
 ): Array<Array<TableEntry>> {
-  const result = [];
+  const result: Array<Array<TableEntry>> = [];
 
   for (const delegateInfo of delegates) {
     const {
@@ -248,7 +249,7 @@ function buildTableData(
 
     const isSelectedDelegate = _.isEqual(delegateInfo, currentDelegate);
 
-    const currentRow = [
+    const currentRow: Array<TableEntry> = [
       {
         value: rank,
         type: TableEntryType.String,
@@ -289,6 +290,7 @@ function buildTableData(
             }
           },
           buttonType: isSelectedDelegate ? 'primary' : 'secondary',
+          disabled: false,
         },
         align: 'right',
       },
@@ -333,15 +335,50 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
     } else {
       this.controller = new CompoundChain(app);
     }
-    this.controller.init(app.chain.meta);
+    this.controller.init(app.chain?.meta);
+
+    try {
+      const addressInCommunity = app.user?.getDefaultAddressInCommunity({
+        chain: app.chain?.id,
+      });
+      const delegateAddress = await this.controller.getDelegate(
+        addressInCommunity?.address,
+        'voting'
+      );
+      if (!delegateAddress) {
+        this.delegate = null;
+        console.log(this.delegate);
+      } else {
+        const delegateProfile = app.profiles.getProfile(
+          app.chain?.id,
+          delegateAddress
+        );
+        const delegate: DelegateInfo = {
+          delegate: delegateProfile,
+          delegateAddress,
+          delegateName: delegateProfile.displayName,
+          voteWeight: 0.1,
+          totalVotes: 100,
+          proposals: 1,
+          rank: 0,
+          recentProposal: null,
+        };
+        this.delegate = delegate;
+        console.log(this.delegate);
+      }
+    } catch (e) {
+      console.log(e);
+    }
+    this.delegates = [];
+    this.tableRendered = false;
   }
   view() {
     if (!this.delegate && !this.delegates) {
-      processDelegates(this.standard).then(({ delegate, delegates }) => {
+      /*  processDelegates(this.standard).then(({ delegate, delegates }) => {
         this.delegate = delegate;
         this.delegates = delegates;
         this.tableRendered = false;
-      });
+      }); */
     }
     const updateSelectedDelegate = async (
       delegate: DelegateInfo,
@@ -359,14 +396,48 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
 
     // Handle Search Bar
     const updateFilter = (value: string) => {
-      this.filteredDelegateInfo = buildTableData(
+      const initialFilter = buildTableData(
         this.delegates,
         this.delegate,
         value,
         updateSelectedDelegate,
         null
       );
-      m.redraw();
+
+      if (initialFilter.length > 0) {
+        this.filteredDelegateInfo = initialFilter;
+        m.redraw();
+      } else {
+        try {
+          decodeAddress(value); // Assert that its a valid address
+          const delegateOptionProfile = app.profiles.getProfile(
+            app.chain?.id,
+            value
+          );
+          const delegateOption: DelegateInfo = {
+            delegate: delegateOptionProfile,
+            delegateAddress: value,
+            delegateName: delegateOptionProfile.displayName,
+            voteWeight: 0.1,
+            totalVotes: 100,
+            proposals: 1,
+            rank: 0,
+            recentProposal: null,
+          };
+
+          this.filteredDelegateInfo = buildTableData(
+            [delegateOption],
+            this.delegate,
+            '',
+            updateSelectedDelegate,
+            null
+          );
+          m.redraw();
+        } catch (e) {
+          // String is not an address and we don't match anything in the table
+          this.filteredDelegateInfo = [];
+        }
+      }
     };
 
     if (this.tableRendered === false) {
@@ -382,7 +453,7 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
 
     return (
       <Sublayout title="Delegation">
-        {/* <div class="top-section">
+        <div class="top-section">
           {this.delegate ? (
             <div class="wrapper">
               <div class="header">Delegates</div>
@@ -407,45 +478,47 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
         </div>
         <div class="bottom-section">
           <div class="wrapper">
-            <div class="subheader">Leaderboard</div>
+            {/* <div class="subheader">Choose a Delegate</div> */}
             <div class="search-wrapper">
               <CWTextInput
                 name="Form field"
                 oninput={(e) => {
                   updateFilter((e.target as any).value);
                 }}
-                placeholder="Search Delegates"
+                placeholder="Search for an Address"
               />
             </div>
 
-            <CWTable
-              columns={[
-                { colTitle: 'Rank', colWidth: '7%', collapse: false },
-                { colTitle: 'Delegate', colWidth: '25%', collapse: false },
-                {
-                  colTitle: 'Vote Weight',
-                  colWidth: '15%',
-                  align: 'right',
-                  collapse: false,
-                },
-                {
-                  colTitle: 'Total Votes',
-                  colWidth: '15%',
-                  align: 'right',
-                  collapse: true,
-                },
-                {
-                  colTitle: 'Proposals',
-                  colWidth: '15%',
-                  align: 'right',
-                  collapse: true,
-                },
-                { colTitle: '', align: 'right', collapse: false },
-              ]}
-              data={this.filteredDelegateInfo}
-            />
+            {this.filteredDelegateInfo?.length > 0 && (
+              <CWTable
+                columns={[
+                  { colTitle: 'Rank', colWidth: '7%', collapse: false },
+                  { colTitle: 'Delegate', colWidth: '25%', collapse: false },
+                  {
+                    colTitle: 'Vote Weight',
+                    colWidth: '15%',
+                    align: 'right',
+                    collapse: false,
+                  },
+                  {
+                    colTitle: 'Total Votes',
+                    colWidth: '15%',
+                    align: 'right',
+                    collapse: true,
+                  },
+                  {
+                    colTitle: 'Proposals',
+                    colWidth: '15%',
+                    align: 'right',
+                    collapse: true,
+                  },
+                  { colTitle: '', align: 'right', collapse: false },
+                ]}
+                data={this.filteredDelegateInfo}
+              />
+            )}
           </div>
-        </div> */}
+        </div>
       </Sublayout>
     );
   }
