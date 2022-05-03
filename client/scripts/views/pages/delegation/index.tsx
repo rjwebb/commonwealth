@@ -313,66 +313,86 @@ function buildTableData(
   return result;
 }
 
+const initializeState = async () => {
+  let standard: GovernanceStandard;
+  if (app.chain?.network === ChainNetwork.Aave) {
+    standard = GovernanceStandard.Aave;
+  } else if (app.chain?.network === ChainNetwork.Compound) {
+    standard = GovernanceStandard.Compound;
+  } else {
+    standard = GovernanceStandard.ERC20Votes;
+  }
+  let controller: AaveChain | CompoundChain;
+  if (standard === GovernanceStandard.Aave) {
+    controller = new AaveChain(app);
+  } else {
+    controller = new CompoundChain(app);
+  }
+  try {
+    await controller.init(app.chain?.meta);
+  } catch (e) {
+    console.log(e);
+  }
+
+  let delegate;
+  try {
+    const addressInCommunity = app.user?.getDefaultAddressInCommunity({
+      chain: app.chain?.id,
+    });
+    const delegateAddress = await controller.getDelegate(
+      addressInCommunity?.address,
+      'voting'
+    );
+
+    if (!delegateAddress) {
+      delegate = null;
+      console.log('No Delegate Address Found');
+    } else {
+      const delegateProfile = app.profiles.getProfile(
+        app.chain?.id,
+        delegateAddress
+      );
+      const delegateInfo: DelegateInfo = {
+        delegate: delegateProfile,
+        delegateAddress,
+        delegateName: delegateProfile.displayName,
+        voteWeight: 0.1,
+        totalVotes: 100,
+        proposals: 1,
+        rank: 0,
+        recentProposal: null,
+      };
+      delegate = delegateInfo;
+    }
+  } catch (e) {
+    console.log(e);
+  }
+
+  return { delegate, controller };
+};
+
 class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
   private delegate: DelegateInfo;
   private delegates: Array<DelegateInfo>;
   private filteredDelegateInfo: Array<Array<TableEntry>>;
   private tableRendered: boolean;
   private controller: AaveChain | CompoundChain;
-  private standard: GovernanceStandard;
+  private hasLoadedState: Boolean;
 
   async oninit() {
+    this.hasLoadedState = false;
     // determine which governance standard being used by this community
-    if (app.chain?.network === ChainNetwork.Aave) {
-      this.standard = GovernanceStandard.Aave;
-    } else if (app.chain?.network === ChainNetwork.Compound) {
-      this.standard = GovernanceStandard.Compound;
-    } else {
-      this.standard = GovernanceStandard.ERC20Votes;
-    }
-    if (this.standard === GovernanceStandard.Aave) {
-      this.controller = new AaveChain(app);
-    } else {
-      this.controller = new CompoundChain(app);
-    }
-    this.controller.init(app.chain?.meta);
-
-    try {
-      const addressInCommunity = app.user?.getDefaultAddressInCommunity({
-        chain: app.chain?.id,
-      });
-      const delegateAddress = await this.controller.getDelegate(
-        addressInCommunity?.address,
-        'voting'
-      );
-      if (!delegateAddress) {
-        this.delegate = null;
-        console.log(this.delegate);
-      } else {
-        const delegateProfile = app.profiles.getProfile(
-          app.chain?.id,
-          delegateAddress
-        );
-        const delegate: DelegateInfo = {
-          delegate: delegateProfile,
-          delegateAddress,
-          delegateName: delegateProfile.displayName,
-          voteWeight: 0.1,
-          totalVotes: 100,
-          proposals: 1,
-          rank: 0,
-          recentProposal: null,
-        };
-        this.delegate = delegate;
-        console.log(this.delegate);
-      }
-    } catch (e) {
-      console.log(e);
-    }
-    this.delegates = [];
-    this.tableRendered = false;
   }
   view() {
+    if (!this.hasLoadedState && app.chain) {
+      initializeState().then(({ delegate, controller }) => {
+        this.delegate = delegate;
+        this.controller = controller;
+      });
+      this.delegates = [];
+      this.tableRendered = false;
+      this.hasLoadedState = true;
+    }
     if (!this.delegate && !this.delegates) {
       /*  processDelegates(this.standard).then(({ delegate, delegates }) => {
         this.delegate = delegate;
