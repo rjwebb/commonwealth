@@ -128,11 +128,6 @@ class DelegateCard implements m.ClassComponent<DelegateCardAttrs> {
                   dataFetched={vnode.attrs.delegateInfo}
                 />
               </div>
-              <CWButton
-                label="Remove"
-                onclick={() => vnode.attrs.updateDelegate(null, 'remove')}
-                buttonType="secondary"
-              />
             </div>
           </div>
           <div class="bottom-section">

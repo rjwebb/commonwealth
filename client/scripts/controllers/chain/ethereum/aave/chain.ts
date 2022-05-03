@@ -4,6 +4,7 @@ import { EthereumCoin } from 'adapters/chain/ethereum/types';
 import EthereumChain from '../chain';
 import AaveApi from './api';
 import { attachSigner } from '../contractApi';
+import { DelegateInfo } from 'client/scripts/views/pages/delegation';
 
 // Thin wrapper over EthereumChain to guarantee the `init()` implementation
 // on the Governance module works as expected.
@@ -54,5 +55,10 @@ export default class AaveChain extends EthereumChain {
       type === 'voting' ? 0 : 1
     );
     return delegate;
+  }
+
+  // TODO: Implement this accross both controllers
+  public async getDelegateInfo(address: string): Promise<DelegateInfo> {
+    return null;
   }
 }
