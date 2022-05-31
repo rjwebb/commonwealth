@@ -9,6 +9,14 @@ import 'pages/delegation/index.scss';
 
 import { Account, AddressInfo, Profile } from 'models';
 import app from 'state';
+import { ChainNetwork } from 'types';
+import { CompoundTypes } from '@commonwealth/chain-events';
+import { decodeAddress } from '@polkadot/util-crypto';
+import { proposals } from '@polkadot/api-derive/council';
+import { ChainEventAttributes } from 'server/models/chain_event';
+// import Web3 from 'web3';
+import { ethers, providers } from 'ethers';
+import { ERC20__factory } from '../../../../../shared/eth/types';
 import { CWTextInput } from '../../components/component_kit/cw_text_input';
 import {
   CWTable,
@@ -17,16 +25,12 @@ import {
 } from '../../components/component_kit/cw_table';
 import User from '../../components/widgets/user';
 import ProfilesController from '../../../controllers/server/profiles';
-import { chain } from 'lodash';
-import { ChainNetwork } from 'types';
 import AaveChain from '../../../controllers/chain/ethereum/aave/chain';
 import DelegateCard from './delegate_card';
 import Sublayout from '../../sublayout';
 import CompoundChain from '../../../controllers/chain/ethereum/compound/chain';
-import { ChainEntityInstance } from 'server/models/chain_entity';
-import { ChainEventAttributes } from 'server/models/chain_event';
-import { CompoundTypes, AaveTypes } from '@commonwealth/chain-events';
-import { decodeAddress } from '@polkadot/util-crypto';
+
+const Web3 = require('web3');
 
 export enum GovernanceStandard {
   ERC20Votes = 'ERC20Votes',
@@ -54,9 +58,10 @@ export type DelegateInfo = {
   recentProposal: Proposal;
 };
 
-async function processDelegates(standard: GovernanceStandard): Promise<{
-  delegate: DelegateInfo;
-  delegates: DelegateInfo[];
+
+async function getProposalData(address: string, standard: GovernanceStandard) : Promise<{
+  proposals: number;
+  mostRecentProposal: Proposal
 }> {
   let response;
   try {
@@ -72,156 +77,48 @@ async function processDelegates(standard: GovernanceStandard): Promise<{
     console.log(e);
   }
 
-  // Specifies number of votes per delegate
-  let delegateWeighting: Map<string, number> = new Map();
-
-  // Specifies which address each user is delegating votes to
-  let delegateMap: Map<string, string> = new Map();
-
   // mapping from proposal index to proposal object
   let proposalMap: Map<number, Proposal>;
 
-  // mapping from delegate address to indices of voted proposals,
-  // most recent proposals, and vote direction
-  let proposalVotes: Map<number, { Map; number }>;
-
-  let totalVotesCast = 0;
+  // mapping from indices of voted proposals to the delegate's support position
+  // on said proposal
+  let proposalVotes: Map<number, number>;
+  let mostRecentProposal: number;
 
   response.result.map((rawEvent: ChainEventAttributes) => {
     const { chain_event_type_id, event_data } = rawEvent;
-    // some simple string manipulation likely needs to be done here for the chain_event_type_id.
     const eventType = chain_event_type_id.slice(
       chain_event_type_id.indexOf('-') + 1,
       chain_event_type_id.length
     );
     const eventData = event_data;
 
-    switch (standard) {
-      /*
-      case GovernanceStandard.ERC20Votes:
-        switch (eventType) {
-          case 'delegated-votes-changed':
-            delegateWeighting[eventData.delegate] = eventData.newBalance;
-            totalVotesCast += eventData.newBalance - eventData.oldBalance;
-            break;
-          case 'delegate-changed':
-            delegateMap[eventData.delegator] = eventData.toDelegate;
-            break;
-          case 'proposal-created'
-          default:
-            break;
+    // assuming GovernanceStandard of Compound or ERC20Votes
+    switch (eventType) {
+      case CompoundTypes.EventKind.ProposalCreated: {
+        const id = eventData.id;
+        const proposalText = eventData.description;
+        // TODO get CW link of proposal
+        const newProposal: Proposal = { id, proposalText };
+        proposalMap[id] = newProposal;
+        break;
+      }
+      case CompoundTypes.EventKind.VoteCast: {
+        if(eventData.voter === address) {
+          proposalVotes[eventData.id] = eventData.support;
+          mostRecentProposal = eventData.proposalId;
         }
         break;
-      */
-      case GovernanceStandard.Compound:
-        switch (eventType) {
-          case CompoundTypes.EventKind.ProposalCreated:
-            let proposer: String = eventData.proposer;
-            let id = eventData.id;
-            let description = eventData.description;
-            // TODO get CW link of proposal
-            let newProposal: Proposal = { id: id, proposalText: description };
-            proposalMap[id] = newProposal;
-            break;
-          case CompoundTypes.EventKind.ProposalQueued:
-            proposalMap[eventData.id].outcome = true;
-          case CompoundTypes.EventKind.ProposalCanceled:
-            break;
-          case CompoundTypes.EventKind.VoteCast:
-            proposalVotes[eventData.voter][0][eventData.id] = eventData.support;
-            proposalVotes[eventData.voter][1] = eventData.id;
-          // TODO remove string once chain-events changes are merged
-          case 'delegated-power-changed':
-            delegateWeighting[eventData.user] = eventData.amount;
-            totalVotesCast += eventData.newBalance - eventData.oldBalance;
-            break;
-          case 'delegate-changed':
-            delegateMap[eventData.delegator] = eventData.toDelegate;
-            break;
-          default:
-            break;
-        }
-        break;
-      case GovernanceStandard.Aave:
-        switch (eventType) {
-          case AaveTypes.EventKind.ProposalCreated:
-            let proposer: String = eventData.proposer;
-            let id = eventData.id;
-            // TODO description not contained in events
-            // TODO get CW link of proposal
-            let newProposal: Proposal = { id: id };
-            proposalMap[id] = newProposal;
-            break;
-          case AaveTypes.EventKind.ProposalQueued:
-            proposalMap[eventData.id].outcome = true;
-            break;
-          case AaveTypes.EventKind.DelegateChanged:
-            // check if delegating voting power specifically
-            if (eventData.type == 0) {
-              delegateMap[eventData.delegator] = eventData.delegatee;
-            }
-            break;
-          case AaveTypes.EventKind.DelegatedPowerChanged:
-            if (eventData.type == 0) {
-              delegateMap[eventData.delegator] = eventData.delegatee;
-            }
-            break;
-          case AaveTypes.EventKind.VoteEmitted:
-            proposalVotes[eventData.voter][0][eventData.id] = eventData.support;
-            proposalVotes[eventData.voter][1] = eventData.id;
-          default:
-            break;
-        }
-        break;
+      }
       default:
         break;
     }
     return rawEvent;
   });
 
-  const prof: ProfilesController = new ProfilesController();
-
-  // rank-order addresses by total votes:
-  const rankOrderedMap = new Map(
-    [...delegateWeighting.entries()].sort((a, b) => b[1] - a[1])
-  );
-  let allDelegates: DelegateInfo[] = [];
-  let delegateOfUser: DelegateInfo = null;
-
-  // Once this table is built (and rank-ordered), create DelegateInfo cards
-  let rank = 1;
-  for (let address of rankOrderedMap.keys()) {
-    let delegateAddress = address;
-    let delegate: Profile = prof.getProfile(chain.name, delegateAddress);
-    let delegateName: string = delegate.name;
-    let totalVotes = delegateWeighting[address];
-    let voteWeight = parseFloat((totalVotes / totalVotesCast).toFixed(2));
-
-    let proposals = proposalVotes[delegateAddress][0].size;
-    let recentProposal = proposalVotes[delegateAddress][1];
-
-    // push current delegate information
-    var newDelegateInfo: DelegateInfo = {
-      delegate,
-      delegateAddress,
-      delegateName,
-      voteWeight,
-      totalVotes,
-      proposals,
-      rank,
-      recentProposal,
-    };
-    allDelegates.push(newDelegateInfo);
-
-    // check to see if our user has delegated to this particular address.
-    if (delegateMap[app.user.activeAccount.address] == address) {
-      delegateOfUser = newDelegateInfo;
-    }
-    rank += 1;
-  }
-  console.log('delegate:', allDelegates);
-  return { delegate: delegateOfUser, delegates: allDelegates };
+  return { proposals: proposalVotes? proposalVotes.size : 0, mostRecentProposal: mostRecentProposal? proposalMap[mostRecentProposal] : null};
 }
+
 
 function buildTableData(
   delegates: Array<DelegateInfo>,
@@ -322,12 +219,7 @@ const initializeState = async () => {
   } else {
     standard = GovernanceStandard.ERC20Votes;
   }
-  let controller: AaveChain | CompoundChain;
-  if (standard === GovernanceStandard.Aave) {
-    controller = new AaveChain(app);
-  } else {
-    controller = new CompoundChain(app);
-  }
+  const controller: CompoundChain = new CompoundChain(app);
   try {
     await controller.init(app.chain?.meta);
   } catch (e) {
@@ -339,15 +231,37 @@ const initializeState = async () => {
     const addressInCommunity = app.user?.getDefaultAddressInCommunity({
       chain: app.chain?.id,
     });
+
+    /*
     const delegateAddress = await controller.getDelegate(
       addressInCommunity?.address,
       'voting'
     );
+    */
+    const delegateAddress = await controller.getDelegate();
 
     if (!delegateAddress) {
       delegate = null;
       console.log('No Delegate Address Found');
     } else {
+      // most recently mined block and total token balance:
+      const provider = new Web3.providers.WebsocketProvider(app.chain.meta.url);
+      const ethersProvider = ethers.getDefaultProvider();
+      const api = ERC20__factory.connect(app.chain.meta.address, new providers.Web3Provider(provider));
+      await api.deployed();
+      const web3 = new Web3(Web3.givenProvider);
+      const blockNumber : number = web3.eth.getBlockNumber();
+      const totalBalance = await (await api.totalSupply()).toNumber();
+
+      // compute voting power of delegate
+      const totalVotes : number = (await controller.priorDelegates(delegateAddress, blockNumber)).toNumber();
+
+      // compute weight of voting power as a fraction of all tokens
+      const voteWeight : number = parseFloat((totalVotes / totalBalance).toPrecision(2));
+
+
+      const {proposals: numProposals, mostRecentProposal: recentProposal} = await getProposalData(delegateAddress, standard);
+
       const delegateProfile = app.profiles.getProfile(
         app.chain?.id,
         delegateAddress
@@ -356,11 +270,11 @@ const initializeState = async () => {
         delegate: delegateProfile,
         delegateAddress,
         delegateName: delegateProfile.displayName,
-        voteWeight: 0.1,
-        totalVotes: 100,
-        proposals: 1,
+        voteWeight,
+        totalVotes,
+        proposals: numProposals,
         rank: 0,
-        recentProposal: null,
+        recentProposal,
       };
       delegate = delegateInfo;
     }
@@ -376,8 +290,8 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
   private delegates: Array<DelegateInfo>;
   private filteredDelegateInfo: Array<Array<TableEntry>>;
   private tableRendered: boolean;
-  private controller: AaveChain | CompoundChain;
-  private hasLoadedState: Boolean;
+  private controller: CompoundChain;
+  private hasLoadedState: boolean;
 
   async oninit() {
     this.hasLoadedState = false;
@@ -392,13 +306,6 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
       this.delegates = [];
       this.tableRendered = false;
       this.hasLoadedState = true;
-    }
-    if (!this.delegate && !this.delegates) {
-      /*  processDelegates(this.standard).then(({ delegate, delegates }) => {
-        this.delegate = delegate;
-        this.delegates = delegates;
-        this.tableRendered = false;
-      }); */
     }
     const updateSelectedDelegate = async (
       delegate: DelegateInfo,
@@ -438,11 +345,11 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
             delegate: delegateOptionProfile,
             delegateAddress: value,
             delegateName: delegateOptionProfile.displayName,
-            voteWeight: 0.1,
-            totalVotes: 100,
-            proposals: 1,
+            voteWeight: this.delegate.voteWeight,
+            totalVotes: this.delegate.totalVotes,
+            proposals: this.delegate.proposals,
             rank: 0,
-            recentProposal: null,
+            recentProposal: this.delegate.recentProposal,
           };
 
           this.filteredDelegateInfo = buildTableData(
