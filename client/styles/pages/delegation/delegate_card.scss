@@ -32,9 +32,9 @@
         .profile-section {
           margin-left: 15px;
           margin-top: 8px;
-          @include lg-max {
-            display: none;
-          }
+          // @include lg-max {
+          //   display: none;
+          // }
           .profile-name {
             font-size: 24px;
             font-weight: 500;
@@ -85,9 +85,9 @@
       justify-content: flex-start;
       align-items: center;
       padding-top: 5px;
-      @include lg-max {
-        padding-left: 20px;
-      }
+      // @include lg-max {
+      //   padding-left: 20px;
+      // }
 
       .latest {
         margin-right: 15px;
@@ -96,9 +96,9 @@
       }
 
       .recent-proposal-text {
-        @include lg-max {
-          display: none;
-        }
+        // @include lg-max {
+        //   display: none;
+        // }
       }
 
       .voted {
@@ -106,9 +106,9 @@
         color: #666666;
         font-weight: 400;
         margin-left: 150px;
-        @include lg-max {
-          margin-left: 50px;
-        }
+        // @include lg-max {
+        //   margin-left: 50px;
+        // }
       }
 
       .passed {
@@ -175,9 +175,9 @@
     flex-direction: column;
     width: fit-content;
 
-    @include lg-max {
-      display: none;
-    }
+    // @include lg-max {
+    //   display: none;
+    // }
 
     .title {
       color: #999999;
