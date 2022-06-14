@@ -94,6 +94,7 @@ export default class CompoundChain extends EthereumChain {
   }
 
   public async getDelegate(): Promise<string> {
+    console.log(`Getting delegate`);
     const token = this.compoundApi?.Token;
     if (!token) {
       console.warn('No token found, cannot fetch delegate');

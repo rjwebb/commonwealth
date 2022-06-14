@@ -12,7 +12,7 @@ import app from 'state';
 import { ChainNetwork } from 'types';
 import { CompoundTypes } from '@commonwealth/chain-events';
 import { decodeAddress } from '@polkadot/util-crypto';
-import { proposals } from '@polkadot/api-derive/council';
+import { PageNotFound } from 'views/pages/404';
 import { ChainEventAttributes } from 'server/models/chain_event';
 // import Web3 from 'web3';
 import { ethers, providers } from 'ethers';
@@ -29,13 +29,14 @@ import AaveChain from '../../../controllers/chain/ethereum/aave/chain';
 import DelegateCard from './delegate_card';
 import Sublayout from '../../sublayout';
 import CompoundChain from '../../../controllers/chain/ethereum/compound/chain';
+import Compound from '../../../controllers/chain/ethereum/compound/adapter';
 
 const Web3 = require('web3');
 
 export enum GovernanceStandard {
   ERC20Votes = 'ERC20Votes',
-  Compound = 'Compound',
-  Aave = 'Aave',
+  CompoundGovernance = 'Compound',
+  AaveGovernance = 'Aave',
 }
 
 type Proposal = {
@@ -213,31 +214,15 @@ function buildTableData(
 const initializeState = async () => {
   let standard: GovernanceStandard;
   if (app.chain?.network === ChainNetwork.Aave) {
-    standard = GovernanceStandard.Aave;
+    standard = GovernanceStandard.AaveGovernance;
   } else if (app.chain?.network === ChainNetwork.Compound) {
-    standard = GovernanceStandard.Compound;
+    standard = GovernanceStandard.CompoundGovernance;
   } else {
     standard = GovernanceStandard.ERC20Votes;
   }
-  const controller: CompoundChain = new CompoundChain(app);
-  try {
-    await controller.init(app.chain?.meta);
-  } catch (e) {
-    console.log(e);
-  }
-
+  const controller = (app.chain as Compound).chain;
   let delegate;
   try {
-    const addressInCommunity = app.user?.getDefaultAddressInCommunity({
-      chain: app.chain?.id,
-    });
-
-    /*
-    const delegateAddress = await controller.getDelegate(
-      addressInCommunity?.address,
-      'voting'
-    );
-    */
     const delegateAddress = await controller.getDelegate();
 
     if (!delegateAddress) {
@@ -245,13 +230,11 @@ const initializeState = async () => {
       console.log('No Delegate Address Found');
     } else {
       // most recently mined block and total token balance:
-      const provider = new Web3.providers.WebsocketProvider(app.chain.meta.url);
-      const ethersProvider = ethers.getDefaultProvider();
-      const api = ERC20__factory.connect(app.chain.meta.address, new providers.Web3Provider(provider));
-      await api.deployed();
-      const web3 = new Web3(Web3.givenProvider);
-      const blockNumber : number = web3.eth.getBlockNumber();
-      const totalBalance = await (await api.totalSupply()).toNumber();
+      const provider = controller.compoundApi.Provider;
+      // const api = ERC20__factory.connect(app.chain.meta.address, new providers.Web3Provider(provider));
+      // await api.deployed();
+      const blockNumber : number = await controller.api.eth.getBlockNumber();
+      const totalBalance = (await controller.compoundApi.Token.totalSupply()).toNumber();
 
       // compute voting power of delegate
       const totalVotes : number = (await controller.priorDelegates(delegateAddress, blockNumber)).toNumber();
@@ -298,6 +281,12 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
     // determine which governance standard being used by this community
   }
   view() {
+    if (app.chain?.loaded && app.chain.network !== ChainNetwork.Compound) {
+      return m(PageNotFound, {
+        title: 'Delegate Page',
+        message: 'Delegate page unavailable on this chain.'
+      });
+    }
     if (!this.hasLoadedState && app.chain) {
       initializeState().then(({ delegate, controller }) => {
         this.delegate = delegate;
@@ -323,6 +312,7 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
 
     // Handle Search Bar
     const updateFilter = (value: string) => {
+      console.log("searching");
       const initialFilter = buildTableData(
         this.delegates,
         this.delegate,
