@@ -692,7 +692,7 @@ Promise.all([$.ready, $.get('/api/domain')]).then(
             }),
             '/delegation': importRoute('views/pages/delegation', {
               scoped: true,
-              deferChain: true,
+              deferChain: false,
             }),
             '/sputnik-daos': importRoute('views/pages/sputnikdaos', {
               scoped: true,
@@ -958,7 +958,7 @@ Promise.all([$.ready, $.get('/api/domain')]).then(
             }),
             '/:scope/delegation': importRoute('views/pages/delegation', {
               scoped: true,
-              deferChain: true,
+              deferChain: false,
             }),
             '/:scope/sputnik-daos': importRoute('views/pages/sputnikdaos', {
               scoped: true,

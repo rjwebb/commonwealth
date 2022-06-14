@@ -1,6 +1,6 @@
 import BN from 'bn.js';
 import { ChainInfo } from 'models';
-import { ERC20Votes } from 'eth/types';
+import { ERC20Votes, ERC20VotesComp} from 'eth/types';
 import { BigNumber } from 'ethers';
 import { EthereumCoin } from 'adapters/chain/ethereum/types';
 import EthereumChain from '../chain';
@@ -40,12 +40,24 @@ export default class CompoundChain extends EthereumChain {
       return new BN(0);
     }
     let delegates: BigNumber;
+    console.log("fetching prior delegates");
+    console.log("token type is", this.compoundApi.tokenType);
     if (this.compoundApi.tokenType === GovernorTokenType.OzVotes) {
       delegates = await (this.compoundApi.Token as ERC20Votes).getPastVotes(
         address,
         blockNumber
       );
-    } else {
+    } else if (this.compoundApi.tokenType === GovernorTokenType.Comp) {
+      console.log(this.compoundApi.Token.address);
+      console.log("address is", address);
+      console.log("block is", blockNumber);
+      delegates = await (this.compoundApi.Token as ERC20VotesComp).getPriorVotes(
+        address,
+        blockNumber
+      );
+    }
+    else {
+      console.log("getting non OzVote delgates");
       delegates = await this.compoundApi.Token.getPriorVotes(
         address,
         blockNumber
@@ -105,9 +117,11 @@ export default class CompoundChain extends EthereumChain {
       console.warn('Cannot fetch delegates on MPond-type token');
       return null;
     } else {
+      console.log("use active account address is", this.app.user.activeAccount.address);
       const delegate = await token.delegates(
         this.app.user.activeAccount.address
       );
+      console.log("got delegate");
       return delegate;
     }
   }

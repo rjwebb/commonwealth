@@ -16,6 +16,7 @@ import { PageNotFound } from 'views/pages/404';
 import { ChainEventAttributes } from 'server/models/chain_event';
 // import Web3 from 'web3';
 import { ethers, providers } from 'ethers';
+import BN from 'bn.js';
 import { ERC20__factory } from '../../../../../shared/eth/types';
 import { CWTextInput } from '../../components/component_kit/cw_text_input';
 import {
@@ -30,6 +31,7 @@ import DelegateCard from './delegate_card';
 import Sublayout from '../../sublayout';
 import CompoundChain from '../../../controllers/chain/ethereum/compound/chain';
 import Compound from '../../../controllers/chain/ethereum/compound/adapter';
+import { PageLoading } from '../loading';
 
 const Web3 = require('web3');
 
@@ -52,8 +54,8 @@ export type DelegateInfo = {
   delegate: Account<any> | AddressInfo | Profile;
   delegateAddress: string;
   delegateName: string;
-  voteWeight: number;
-  totalVotes: number;
+  voteWeight: BN;
+  totalVotes: BN;
   proposals: number;
   rank: number;
   recentProposal: Proposal;
@@ -132,7 +134,7 @@ function buildTableData(
   standard: GovernanceStandard
 ): Array<Array<TableEntry>> {
   const result: Array<Array<TableEntry>> = [];
-
+  console.log("building table data");
   for (const delegateInfo of delegates) {
     const {
       delegate,
@@ -144,7 +146,7 @@ function buildTableData(
       rank,
       recentProposal,
     } = delegateInfo;
-
+    console.log(delegateAddress);
     const isSelectedDelegate = _.isEqual(delegateInfo, currentDelegate);
 
     const currentRow: Array<TableEntry> = [
@@ -224,24 +226,26 @@ const initializeState = async () => {
   let delegate;
   try {
     const delegateAddress = await controller.getDelegate();
-
     if (!delegateAddress) {
       delegate = null;
       console.log('No Delegate Address Found');
     } else {
+      console.log(`delegate is ${delegateAddress}`);
       // most recently mined block and total token balance:
-      const provider = controller.compoundApi.Provider;
-      // const api = ERC20__factory.connect(app.chain.meta.address, new providers.Web3Provider(provider));
-      // await api.deployed();
       const blockNumber : number = await controller.api.eth.getBlockNumber();
-      const totalBalance = (await controller.compoundApi.Token.totalSupply()).toNumber();
-
+      console.log(blockNumber);
+      const totalBalance : BN = new BN((await controller.compoundApi.Token.totalSupply()).toString());
+      console.log("total balance is");
+      console.log(totalBalance.toString())
       // compute voting power of delegate
-      const totalVotes : number = (await controller.priorDelegates(delegateAddress, blockNumber)).toNumber();
-
+      const totalVotes : BN = (await controller.priorDelegates(delegateAddress, blockNumber));
+      console.log("total votes is");
+      console.log(totalVotes.toString())
       // compute weight of voting power as a fraction of all tokens
-      const voteWeight : number = parseFloat((totalVotes / totalBalance).toPrecision(2));
+      const voteWeight : BN = totalVotes.div(totalBalance);
+      // .toPrecision(2));
 
+      console.log(`Vote weight is`, voteWeight.toString());
 
       const {proposals: numProposals, mostRecentProposal: recentProposal} = await getProposalData(delegateAddress, standard);
 
@@ -274,27 +278,28 @@ class DelegationPage implements m.ClassComponent<DelegationPageAttrs> {
   private filteredDelegateInfo: Array<Array<TableEntry>>;
   private tableRendered: boolean;
   private controller: CompoundChain;
-  private hasLoadedState: boolean;
 
-  async oninit() {
-    this.hasLoadedState = false;
-    // determine which governance standard being used by this community
-  }
   view() {
+    if (!app.chain || !app.chain.loaded) {
+      // chain loading
+      return m(PageLoading, {
+        message: 'Connecting to chain',
+        title: 'Delegate',
+      });
+    }
     if (app.chain?.loaded && app.chain.network !== ChainNetwork.Compound) {
       return m(PageNotFound, {
         title: 'Delegate Page',
         message: 'Delegate page unavailable on this chain.'
       });
     }
-    if (!this.hasLoadedState && app.chain) {
+    if (app.chain?.loaded) {
       initializeState().then(({ delegate, controller }) => {
         this.delegate = delegate;
         this.controller = controller;
       });
       this.delegates = [];
       this.tableRendered = false;
-      this.hasLoadedState = true;
     }
     const updateSelectedDelegate = async (
       delegate: DelegateInfo,
