@@ -84,16 +84,16 @@ class DelegateCard implements m.ClassComponent<DelegateCardAttrs> {
                   }}
                 >
                   <div class="address">
-                    {(
+                    {`${(
                       vnode.attrs.delegateInfo.delegate as Profile
-                    )?.address.slice(0, 5) +
-                      '...' +
+                    )?.address.slice(0, 5)
+                      }...${
                       (
                         vnode.attrs.delegateInfo.delegate as Profile
                       )?.address.slice(
                         (vnode.attrs.delegateInfo.delegate as Profile)?.address
                           .length - 5
-                      )}
+                      )}`}
                   </div>
                   <img
                     class="copy-icon"
