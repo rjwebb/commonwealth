@@ -40,7 +40,8 @@ export default class ProjectsController {
     return this._store;
   }
 
-  private _factoryInfo: ChainInfo;
+  private _factoryInfo: NodeInfo;
+  private _factoryAddress: string;
   private _app: IApp;
 
   private async _loadProjectsFromServer(project_id?: number) {
@@ -48,7 +49,7 @@ export default class ProjectsController {
       `${this._app.serverUrl()}/getProjects`,
       project_id ? { project_id } : {}
     );
-    for (const project of res) {
+    for (const project of res.result) {
       try {
         const pObj = Project.fromJSON(project);
         if (!this._store.getById(pObj.id)) {
@@ -67,17 +68,19 @@ export default class ProjectsController {
   public async init(app: IApp) {
     this._initializing = true;
     this._app = app;
-
     // locate CWP community, containing factory address + node url
+    console.log(this._app.config.chains.getById(ChainNetwork.CommonProtocol));
+    this._factoryAddress = this._app.config.chains.getById(
+      ChainNetwork.CommonProtocol
+    ).address;
     this._factoryInfo = this._app.config.chains.getById(
       ChainNetwork.CommonProtocol
-    );
+    ).node;
     if (!this._factoryInfo) {
       console.error('CWP factory info not found!');
       this._initializing = false;
       return;
     }
-
     // load all projects from server
     try {
       await this._loadProjectsFromServer();
@@ -123,7 +126,7 @@ export default class ProjectsController {
     } = projectData;
 
     const creator = this._app.user.activeAccount;
-
+    console.log(`got project data! ${beneficiary}`);
     // upload ipfs content
     // TODO: should we check for failure vs success in result?
     let ipfsHash: string;
@@ -146,7 +149,7 @@ export default class ProjectsController {
       creator,
       null,
       ICuratedProjectFactory__factory.connect,
-      this._factoryInfo.address
+      this._factoryAddress
     );
 
     const projectId = (await contract.numProjects()).toNumber();
