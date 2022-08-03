@@ -11,6 +11,7 @@ export enum ComponentType {
   CommunityAvatar = 'CommunityAvatar',
   CustomIcon = 'CustomIcon',
   Divider = 'Divider',
+  Frame = 'Frame',
   EngagementButton = 'EngagementButton',
   ExternalLink = 'ExternalLink',
   GradientButton = 'GradientButton',
