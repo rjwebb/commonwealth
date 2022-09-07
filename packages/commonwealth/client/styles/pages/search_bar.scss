@@ -26,6 +26,7 @@
     gap: 6px;
     min-width: fit-content;
     padding: 0 6px;
+    margin-right: 12px;
     .Icon {
       cursor: pointer;
     }
@@ -63,7 +64,7 @@
       background: transparent;
       box-shadow: none;
       height: 40px;
-      padding: 4px 16px;
+      padding: 4px 16px 4px 4px;
       position: relative;
       border: none;
       outline: 0;

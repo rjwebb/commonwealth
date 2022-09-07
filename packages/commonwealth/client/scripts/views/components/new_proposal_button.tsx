@@ -196,7 +196,6 @@ export class NewProposalButton implements m.Component<NewProposalButtonAttrs> {
             disabled={!app.user.activeAccount}
             iconButtonTheme="black"
             iconName="plusCircle"
-            iconSize="medium"
           />
         }
         position="bottom-end"

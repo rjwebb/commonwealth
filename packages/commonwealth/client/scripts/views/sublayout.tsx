@@ -84,7 +84,7 @@ class Sublayout implements m.ClassComponent<SublayoutAttrs> {
         <div class="header-and-body-container">
           <div class="header-container">
             <SublayoutHeaderLeft parentState={this} />
-            {!disableSearch && m(SearchBar, { toggled: this.searchbarToggled })}
+            {!disableSearch && <SearchBar toggled={searchbarToggled} />}
             <SublayoutHeaderRight
               chain={chain}
               disableSearch={disableSearch}

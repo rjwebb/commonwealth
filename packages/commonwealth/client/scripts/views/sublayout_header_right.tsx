@@ -12,6 +12,7 @@ import { InvitesMenu } from 'views/components/header/invites_menu';
 import { LoginSelector } from 'views/components/header/login_selector';
 import Sublayout from './sublayout';
 import { CWIcon } from './components/component_kit/cw_icons/cw_icon';
+import { CWIconButton } from './components/component_kit/cw_icon_button';
 
 type SublayoutHeaderRightAttrs = {
   chain: ChainInfo;
@@ -41,6 +42,7 @@ export class SublayoutHeaderRight
           />
         )}
         {/* threadOnly option assumes all chains have proposals beyond threads */}
+        <CWIconButton iconName="questionFilled" iconButtonTheme="black" />
         {showNewProposalButton && (
           <NewProposalButton fluid={false} threadOnly={!chain} />
         )}

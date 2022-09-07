@@ -469,7 +469,7 @@ export class SearchBar implements m.Component<{ toggled: boolean }> {
     this.chainScopedTagEnabled = true;
   }
 
-  view(vnode: m.VnodeDOM<{ toggled: boolean }>) {
+  view(vnode: m.VnodeDOM<{ toggled: boolean }, this>) {
     if (!this.searchTerm) this.searchTerm = '';
 
     if (!this.searchQuery) {

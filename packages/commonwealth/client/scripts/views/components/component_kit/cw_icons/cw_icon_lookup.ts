@@ -56,6 +56,7 @@ export const iconLookup = {
   pin: Icons.CWPin,
   plus: Icons.CWPlus,
   plusCircle: Icons.CWPlusCircle,
+  questionFilled: Icons.CWQuestionFilled,
   search: Icons.CWSearch,
   send: Icons.CWSend,
   share: Icons.CWShare,
