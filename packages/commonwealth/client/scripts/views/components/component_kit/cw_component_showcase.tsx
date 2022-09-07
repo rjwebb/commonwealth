@@ -600,6 +600,9 @@ export class ComponentShowcase implements m.ClassComponent {
             Body1 italic
           </CWText>
           <CWText type="b2">Body2 regular</CWText>
+          <CWText type="b2" fontWeight="medium">
+            Body2 medium
+          </CWText>
           <CWText type="b2" fontWeight="bold">
             Body2 bold
           </CWText>

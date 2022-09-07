@@ -26,6 +26,9 @@ import { ContentType } from 'controllers/server/search';
 import User, { UserBlock } from './widgets/user';
 import { CommunityLabel } from './community_label';
 import { renderQuillTextBody } from './quill/helpers';
+import { CWText } from './component_kit/cw_text';
+import { CWCommunityAvatar } from './component_kit/cw_community_avatar';
+import { CWIcon } from './component_kit/cw_icons/cw_icon';
 
 const getMemberPreview = (
   addr,
@@ -449,6 +452,7 @@ const executeSearch = (query: SearchQuery) => {
 export class SearchBar implements m.Component {
   private activeChain: string;
   private activeCommunity: string;
+  private chainScopedTagEnabled: boolean;
   private closeResults: () => void;
   private errorText: string;
   private filterMenuActive: boolean;
@@ -460,6 +464,10 @@ export class SearchBar implements m.Component {
   private searchQuery: SearchQuery;
   private searchTerm: string;
   private setUsingFilterMenu: (boolean) => void;
+
+  oninit() {
+    this.chainScopedTagEnabled = true;
+  }
 
   view() {
     if (!this.searchTerm) this.searchTerm = '';
@@ -643,10 +651,30 @@ export class SearchBar implements m.Component {
 
     return (
       <ControlGroup class="SearchBar">
+        {app.chain && this.chainScopedTagEnabled && (
+          <Tag
+            label={
+              <>
+                <CWCommunityAvatar community={app.chain.meta} size="small" />
+                <CWText
+                  type="b2"
+                  fontWeight="medium"
+                >{`in: ${app.chain.meta.name}`}</CWText>
+                <CWIcon
+                  iconName="close"
+                  iconSize="small"
+                  onclick={() => {
+                    this.chainScopedTagEnabled = false;
+                  }}
+                />
+              </>
+            }
+          />
+        )}
         <Input
           name="search"
-          placeholder="Type to search..."
-          autofocus={false} // !isMobile,
+          placeholder="Search Common"
+          autofocus={false}
           fluid={true}
           tabIndex={-10}
           contentRight={
@@ -691,6 +719,7 @@ export class SearchBar implements m.Component {
             }
           }}
         />
+        <CWIcon iconName="search" iconSize="medium" />
         {this.focused && !this.hideResults && filterDropdown}
       </ControlGroup>
     );

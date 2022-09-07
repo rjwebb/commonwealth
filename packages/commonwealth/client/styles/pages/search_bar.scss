@@ -1,22 +1,33 @@
 @import 'client/styles/shared';
 
-.cui-control-group {
-  flex: 1;
-  margin: 0 24px;
-  position: relative;
-}
-
-.cui-control-group .SearchBar {
-  flex: 1;
-}
-
 .SearchBar {
+  display: flex;
+  background: $neutral-25;
+  border-radius: 25px;
+  border: 1px solid $neutral-300;
+  flex: 1;
+  height: 40px;
+  margin: 0 24px;
+  padding: 6px 16px;
+  position: relative;
+
+  .cui-tag {
+    background-color: $neutral-100;
+    border: none;
+    border-radius: 5px;
+    display: flex;
+    gap: 6px;
+    min-width: fit-content;
+    padding: 0 6px;
+    .Icon {
+      cursor: pointer;
+    }
+  }
+
   .cui-input {
     align-items: center;
-    border-radius: 25px;
-    border: 1px solid $neutral-50;
-    color: $black;
-    display: flex;
+    background: transparent;
+    color: $neutral-500;
     font-size: 14px;
     height: 100%;
 
@@ -42,10 +53,11 @@
     }
 
     input {
+      background: transparent;
+      box-shadow: none;
       height: 40px;
       padding: 4px 16px;
       position: relative;
-      background: $neutral-100;
       border: none;
       outline: 0;
     }
