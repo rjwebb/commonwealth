@@ -449,7 +449,7 @@ const executeSearch = (query: SearchQuery) => {
   m.route.set(`/search?${query.toUrlParams()}`);
 };
 
-export class SearchBar implements m.Component {
+export class SearchBar implements m.Component<{ toggled: boolean }> {
   private activeChain: string;
   private activeCommunity: string;
   private chainScopedTagEnabled: boolean;
@@ -469,7 +469,7 @@ export class SearchBar implements m.Component {
     this.chainScopedTagEnabled = true;
   }
 
-  view() {
+  view(vnode: m.VnodeDOM<{ toggled: boolean }>) {
     if (!this.searchTerm) this.searchTerm = '';
 
     if (!this.searchQuery) {
@@ -650,7 +650,7 @@ export class SearchBar implements m.Component {
     ) : null;
 
     return (
-      <ControlGroup class="SearchBar">
+      <ControlGroup class={`SearchBar ${vnode.attrs.toggled ? 'toggled' : ''}`}>
         {app.chain && this.chainScopedTagEnabled && (
           <Tag
             label={

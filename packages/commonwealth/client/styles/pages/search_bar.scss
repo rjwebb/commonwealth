@@ -7,9 +7,16 @@
   border: 1px solid $neutral-300;
   flex: 1;
   height: 40px;
-  margin: 0 24px;
+  margin: 0 32px;
   padding: 6px 16px;
   position: relative;
+
+  @include mediumSmallInclusive {
+    display: none;
+    &.toggled {
+      display: flex;
+    }
+  }
 
   .cui-tag {
     background-color: $neutral-100;

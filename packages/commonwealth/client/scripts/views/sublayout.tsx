@@ -15,14 +15,13 @@ import { Footer } from './footer';
 import { SublayoutBanners } from './sublayout_banners';
 import { isWindowMediumSmallInclusive } from './components/component_kit/helpers';
 import { CommunityHeader } from './components/sidebar/community_header';
+import { CWIcon } from './components/component_kit/cw_icons/cw_icon';
 
 type SublayoutAttrs = {
-  alwaysShowTitle?: boolean; // show page title even if app.chain and app.community are unavailable
   hideFooter?: boolean;
-  hideSearch?: boolean;
+  disableSearch?: boolean;
   onscroll: () => null; // lazy loading for page content
   showNewProposalButton?: boolean;
-  title?: string; // displayed at the top of the layout
 };
 
 const footercontents = [
@@ -50,16 +49,15 @@ const footercontents = [
 ];
 
 class Sublayout implements m.ClassComponent<SublayoutAttrs> {
+  private searchbarToggled: boolean;
   private sidebarToggled: boolean;
 
   view(vnode) {
     const {
-      alwaysShowTitle,
       hideFooter = false,
-      hideSearch,
+      disableSearch,
       onscroll,
       showNewProposalButton,
-      title,
     } = vnode.attrs;
 
     const chain = app.chain ? app.chain.meta : null;
@@ -74,20 +72,23 @@ class Sublayout implements m.ClassComponent<SublayoutAttrs> {
     if (largeBrowserSize || localStorageToggle) {
       this.sidebarToggled = true;
     }
-    const { sidebarToggled } = this;
+    const { searchbarToggled, sidebarToggled } = this;
 
     if (m.route.param('triggerInvite') === 't') {
       setTimeout(() => handleEmailInvites(this), 0);
     }
+    console.log(this.searchbarToggled);
 
     return (
       <div class="Sublayout">
         <div class="header-and-body-container">
           <div class="header-container">
             <SublayoutHeaderLeft parentState={this} />
-            {!hideSearch && m(SearchBar)}
+            {!disableSearch && m(SearchBar, { toggled: this.searchbarToggled })}
             <SublayoutHeaderRight
               chain={chain}
+              disableSearch={disableSearch}
+              parentState={this}
               showNewProposalButton={showNewProposalButton}
             />
           </div>

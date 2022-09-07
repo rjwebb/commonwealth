@@ -1,11 +1,22 @@
+@import 'shared';
+
 .SublayoutHeaderRight {
   align-items: center;
   display: flex;
   flex-direction: row;
+  gap: 12px;
   justify-content: flex-end;
 
-  > :not(:first-child) {
-    margin-left: 8px;
+  .Icon.search {
+    @include large {
+      display: none;
+    }
+  }
+
+  .Icon.search {
+    @include medium {
+      display: none;
+    }
   }
 }
 
