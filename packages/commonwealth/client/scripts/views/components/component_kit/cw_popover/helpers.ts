@@ -17,6 +17,7 @@ export const getPosition = ({
   tooltipOffset?: number;
   borderOffset?: number;
 }) => {
+  console.log({ trigger, container });
   const triggerBoundingRect = trigger.getBoundingClientRect();
   const containerBoundingRect = container.getBoundingClientRect();
 

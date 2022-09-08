@@ -15,7 +15,6 @@ import { Footer } from './footer';
 import { SublayoutBanners } from './sublayout_banners';
 import { isWindowMediumSmallInclusive } from './components/component_kit/helpers';
 import { CommunityHeader } from './components/sidebar/community_header';
-import { CWIcon } from './components/component_kit/cw_icons/cw_icon';
 
 type SublayoutAttrs = {
   hideFooter?: boolean;

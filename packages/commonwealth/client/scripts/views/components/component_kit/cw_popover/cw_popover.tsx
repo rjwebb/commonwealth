@@ -75,7 +75,6 @@ export class CWPopover implements m.ClassComponent<PopoverAttrs> {
     try {
       // TODO Gabe 6/1/22 - Figure out how to avoid these both being null at first
       const popoverContainer = document.getElementById(this.contentId);
-
       const inlineStyle = getPosition({
         arrowSize: vnode.attrs.tooltipType ? 8 : undefined,
         container: popoverContainer,

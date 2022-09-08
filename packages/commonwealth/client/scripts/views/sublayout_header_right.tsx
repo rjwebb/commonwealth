@@ -46,9 +46,8 @@ export class SublayoutHeaderRight
         {showNewProposalButton && (
           <NewProposalButton fluid={false} threadOnly={!chain} />
         )}
-        {app.isLoggedIn() && <NotificationsMenu />}
-        {app.isLoggedIn() && <InvitesMenu />}
-        <InvitesMenu />
+        {/* {app.isLoggedIn() && <NotificationsMenu />}
+        {app.isLoggedIn() && <InvitesMenu />} */}
         <LoginSelector />
       </div>
     );

@@ -11,6 +11,7 @@ import {
   CWPopoverMenuItem,
 } from './component_kit/cw_popover/cw_popover_menu';
 import { CWIconButton } from './component_kit/cw_icon_button';
+import { isWindowSmallInclusive } from './component_kit/helpers';
 
 type NewProposalMenuAttrs = {
   mobile?: boolean;
@@ -63,7 +64,7 @@ export class NewProposalMenu implements m.ClassComponent<NewProposalMenuAttrs> {
               navigateToSubpage('/new/discussion');
             }}
             label={`New ${t.name} Thread`}
-            iconName={mobile ? Icons.CWPlus : undefined}
+            // iconName={mobile ? Icons.CWPlus : undefined}
           />
         ))}
         {(app.chain?.network === ChainNetwork.Aave ||
@@ -77,7 +78,7 @@ export class NewProposalMenu implements m.ClassComponent<NewProposalMenuAttrs> {
             <CWPopoverMenuItem
               onclick={() => navigateToSubpage('/new/proposal')}
               label="New On-Chain Proposal"
-              iconName={mobile ? Icons.CWPlus : undefined}
+              // iconName={mobile ? Icons.CWPlus : undefined}
             />
           )}
         {app.chain?.base === ChainBase.Ethereum &&
@@ -85,14 +86,14 @@ export class NewProposalMenu implements m.ClassComponent<NewProposalMenuAttrs> {
             <CWPopoverMenuItem
               onclick={() => navigateToSubpage('/new/proposal')}
               label="New On-Chain Proposal"
-              iconName={mobile ? Icons.CWPlus : undefined}
+              // iconName={mobile ? Icons.CWPlus : undefined}
             />
           )}
         {app.chain?.network === ChainNetwork.Compound && (
           <CWPopoverMenuItem
             onclick={() => navigateToSubpage('/new/proposal')}
             label="New On-Chain Proposal"
-            iconName={mobile ? Icons.CWPlus : undefined}
+            // iconName={mobile ? Icons.CWPlus : undefined}
           />
         )}
         {app.chain?.base === ChainBase.Substrate &&
@@ -105,7 +106,7 @@ export class NewProposalMenu implements m.ClassComponent<NewProposalMenuAttrs> {
                   })
                 }
                 label="New treasury proposal"
-                iconName={mobile ? Icons.CWPlus : undefined}
+                // iconName={mobile ? Icons.CWPlus : undefined}
               />
               <CWPopoverMenuItem
                 onclick={() =>
@@ -114,7 +115,7 @@ export class NewProposalMenu implements m.ClassComponent<NewProposalMenuAttrs> {
                   })
                 }
                 label="New democracy proposal"
-                iconName={mobile ? Icons.CWPlus : undefined}
+                // iconName={mobile ? Icons.CWPlus : undefined}
               />
               <CWPopoverMenuItem
                 class={
@@ -128,7 +129,7 @@ export class NewProposalMenu implements m.ClassComponent<NewProposalMenuAttrs> {
                   })
                 }
                 label="New council motion"
-                iconName={mobile ? Icons.CWPlus : undefined}
+                // iconName={mobile ? Icons.CWPlus : undefined}
               />
               <CWPopoverMenuItem
                 onclick={() =>
@@ -137,7 +138,7 @@ export class NewProposalMenu implements m.ClassComponent<NewProposalMenuAttrs> {
                   })
                 }
                 label="New bounty proposal"
-                iconName={mobile ? Icons.CWPlus : undefined}
+                // iconName={mobile ? Icons.CWPlus : undefined}
               />
               <CWPopoverMenuItem
                 onclick={() =>
@@ -146,7 +147,7 @@ export class NewProposalMenu implements m.ClassComponent<NewProposalMenuAttrs> {
                   })
                 }
                 label="New tip"
-                iconName={mobile ? Icons.CWPlus : undefined}
+                // iconName={mobile ? Icons.CWPlus : undefined}
               />
             </>
           )}
@@ -203,7 +204,9 @@ export class NewProposalButton implements m.Component<NewProposalButtonAttrs> {
         menuAttrs={{
           align: 'left',
         }}
-        content={<NewProposalMenu />}
+        content={
+          <NewProposalMenu mobile={isWindowSmallInclusive(window.innerWidth)} />
+        }
       />
     );
   }

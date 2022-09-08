@@ -1,6 +1,6 @@
 /* @jsx m */
 
-import m from 'mithril';
+import m, { VnodeDOM } from 'mithril';
 
 import 'components/component_kit/cw_popover/cw_popover_menu.scss';
 
@@ -64,18 +64,16 @@ export class CWPopoverMenuItem
 }
 
 type PopoverMenuAttrs = {
-  popoverMenuItems: Array<CWPopoverMenuItem>;
+  content: Array<CWPopoverMenuItem> | { children: CWPopoverMenuItem[] };
 } & SharedPopoverAttrs;
 
 export class CWPopoverMenu implements m.ClassComponent<PopoverMenuAttrs> {
-  view(vnode) {
-    const { popoverMenuItems, trigger } = vnode.attrs;
-
+  view(vnode: m.VnodeDOM<PopoverMenuAttrs, this>) {
+    const { content, trigger } = vnode.attrs;
+    console.log({ content });
     return (
       <CWPopover
-        content={
-          <div class={ComponentType.PopoverMenu}>{popoverMenuItems}</div>
-        }
+        content={<div class={ComponentType.PopoverMenu}>{content}</div>}
         interactionType="click"
         trigger={trigger}
       />
