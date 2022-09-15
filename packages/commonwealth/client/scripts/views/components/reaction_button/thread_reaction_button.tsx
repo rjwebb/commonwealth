@@ -5,6 +5,7 @@ import 'components/reaction_button/comment_reaction_button.scss';
 import m from 'mithril';
 import app from 'state';
 import TopicGateCheck from 'controllers/chain/ethereum/gatedTopic';
+import { sessionSigninModal } from 'views/modals/session_signin_modal';
 import { Thread, ChainInfo } from 'models';
 import {
   fetchReactionsByPost,
@@ -55,6 +56,10 @@ export class ThreadReactionButton
       const reaction = (await fetchReactionsByPost(thread)).find((r) => {
         return r.Address.address === activeAddress;
       });
+
+      await sessionSigninModal();
+      const { signature } = await app.sessions.signDeleteThreadReaction(wallet, { id: reaction.canvasId });
+
       this.loading = true;
       app.reactionCounts
         .delete(reaction, {
@@ -71,7 +76,10 @@ export class ThreadReactionButton
         });
     };
 
-    const like = (chain: ChainInfo, chainId: string, userAddress: string) => {
+    const like = async (chain: ChainInfo, chainId: string, userAddress: string) => {
+      await sessionSigninModal();
+      const { signature, sessionData, actionData, id } = await app.sessions.signThreadReaction(wallet, { threadId, like: true });
+
       this.loading = true;
       app.reactionCounts
         .create(userAddress, thread, 'like', chainId)

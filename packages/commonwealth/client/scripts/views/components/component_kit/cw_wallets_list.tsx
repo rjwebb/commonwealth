@@ -151,6 +151,8 @@ type WalletsListAttrs = {
   accountVerifiedCallback: (account: Account) => void;
   setSelectedWallet: (wallet: IWebWallet<any>) => void;
   linking: boolean;
+  useSessionKeyLoginFlow: boolean;
+  hideConnectAnotherWayLink: boolean;
 };
 
 export class CWWalletsList implements m.ClassComponent<WalletsListAttrs> {
@@ -164,7 +166,25 @@ export class CWWalletsList implements m.ClassComponent<WalletsListAttrs> {
       setSelectedWallet,
       accountVerifiedCallback,
       linking,
+      useSessionKeyLoginFlow,
+      hideConnectAnotherWayLink,
     } = vnode.attrs;
+
+    // We call handleNormalWalletLogin if we're using connecting a new wallet, and
+    // handleSessionKeyRevalidation if we're regenerating a session key.
+    async function handleSessionKeyRevalidation(wallet, address) {
+      const validationBlockInfo = await wallet.getRecentBlock();
+      const { account, newlyCreated } =
+        await createUserWithAddress(
+          address,
+          wallet.name,
+          app.chain?.id || wallet.defaultNetwork,
+          validationBlockInfo
+        );
+      const signature = await wallet.signWithAccount(account);
+      await wallet.validateWithAccount(account, signature); // do we need this?
+      console.log('success', account, signature);
+    }
 
     async function handleNormalWalletLogin(wallet, address) {
       if (app.isLoggedIn()) {
@@ -323,7 +343,11 @@ export class CWWalletsList implements m.ClassComponent<WalletsListAttrs> {
                         address = wallet.accounts[0].address;
                       }
 
-                      await handleNormalWalletLogin(wallet, address);
+                      if (useSessionKeyLoginFlow) {
+                        await handleSessionKeyRevalidation(wallet, address);
+                      } else {
+                        await handleNormalWalletLogin(wallet, address);
+                      }
                     }
                   }
                 }}
@@ -379,7 +403,7 @@ export class CWWalletsList implements m.ClassComponent<WalletsListAttrs> {
             )}
           </div>
         </div>
-        <CWText
+        {!hideConnectAnotherWayLink && <CWText
           type="b2"
           className={getClasses<{ darkMode?: boolean }>(
             { darkMode },
@@ -387,7 +411,7 @@ export class CWWalletsList implements m.ClassComponent<WalletsListAttrs> {
           )}
         >
           <a onclick={connectAnotherWayOnclick}>Connect Another Way</a>
-        </CWText>
+        </CWText>}
       </div>
     );
   }

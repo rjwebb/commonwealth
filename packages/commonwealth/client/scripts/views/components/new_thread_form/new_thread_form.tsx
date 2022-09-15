@@ -20,6 +20,7 @@ import { notifySuccess, notifyError } from 'controllers/app/notifications';
 import TopicGateCheck from 'controllers/chain/ethereum/gatedTopic';
 import { DraftParams } from 'controllers/server/drafts';
 import { confirmationModalWithText } from '../../modals/confirm_modal';
+import { sessionSigninModal } from '../../modals/session_signin_modal';
 import { EditProfileModal } from '../../modals/edit_profile_modal';
 import { TopicSelector } from '../topic_selector';
 import { QuillEditorComponent } from '../quill/quill_editor_component';
@@ -59,6 +60,16 @@ export class NewThreadForm implements m.ClassComponent<NewThreadFormAttrs> {
     const body = quillEditorState.textContentsAsString;
     quillEditorState.disable();
     checkNewThreadErrors(form, body);
+
+    await sessionSigninModal();
+    // TODO wallet
+    const { signature, sessionData, actionData, id } = app.sessions.signThread(wallet, {
+      community: app.activeChainId(),
+      title: form.title,
+      body,
+      link: form.url,
+      topic: form.topicName,
+    });
 
     try {
       const result = await app.threads.create(
@@ -335,7 +346,7 @@ export class NewThreadForm implements m.ClassComponent<NewThreadFormAttrs> {
           <div class="new-thread-form-inputs">
             {author?.profile && !author.profile.name && (
               <div class="set-display-name-callout">
-                <CWText>You haven't set a display name yet.</CWText>
+                <CWText>{"You haven't set a display name yet."}</CWText>
                 <a
                   href={`/${chainId}/account/${author.address}?base=${author.chain.id}`}
                   onclick={(e) => {
@@ -447,7 +458,8 @@ export class NewThreadForm implements m.ClassComponent<NewThreadFormAttrs> {
                         }
                       } catch (err) {
                         this.saving = false;
-                        notifyError(err.message);
+                        if (err) notifyError(err.message);
+                        m.redraw();
                       }
                     }}
                     label={
@@ -483,7 +495,8 @@ export class NewThreadForm implements m.ClassComponent<NewThreadFormAttrs> {
                         m.redraw();
                       } catch (err) {
                         this.saving = false;
-                        notifyError(err.message);
+                        if (err) notifyError(err.message);
+                        m.redraw();
                       }
                     }}
                     label={fromDraft ? 'Update saved draft' : 'Save draft'}

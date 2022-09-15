@@ -80,6 +80,9 @@ export const modelFromServer = (comment) => {
           authorChain: comment?.Address?.chain || comment.authorChain,
           lastEdited,
           deleted: true,
+          signature: comment.signature,
+          signedData: comment.signedData,
+          signedHash: comment.signedHash,
         }
       : {
           chain: comment.chain,
@@ -96,6 +99,9 @@ export const modelFromServer = (comment) => {
           authorChain: comment?.Address?.chain || comment.authorChain,
           lastEdited,
           deleted: false,
+          signature: comment.signature,
+          signedData: comment.signedData,
+          signedHash: comment.signedHash,
         };
 
   return new Comment(commentParams);
@@ -146,6 +152,10 @@ class CommentsController {
     attachments?: string[]
   ) {
     try {
+      // TODO wallet
+      const { signature, sessionData, actionData, signedHash } = app.sessions.signComment(wallet, { text: unescapedText, parent: parentCommentId })
+      const signedData = JSON.stringify({ sessionData, actionData })
+
       // TODO: Change to POST /comment
       const res = await $.post(`${app.serverUrl()}/createComment`, {
         author_chain: app.user.activeAccount.chain.id,
@@ -156,6 +166,9 @@ class CommentsController {
         'attachments[]': attachments,
         text: encodeURIComponent(unescapedText),
         jwt: app.user.jwt,
+        signature,
+        signedData,
+        signedHash,
       });
       const { result } = res;
       const newComment = modelFromServer(result);
@@ -181,6 +194,8 @@ class CommentsController {
     const newBody = body || comment.text;
     try {
       // TODO: Change to PUT /comment
+      const { signature, sessionData, actionData, signedHash, } = app.sessions.signComment(wallet, { text: body, parent: comment.parentCommentId })
+      const signedData = JSON.stringify({ sessionData, actionData })
       const response = await $.post(`${app.serverUrl()}/editComment`, {
         address: app.user.activeAccount.address,
         author_chain: app.user.activeAccount.chain.id,
@@ -189,6 +204,9 @@ class CommentsController {
         body: encodeURIComponent(newBody),
         'attachments[]': attachments,
         jwt: app.user.jwt,
+        signature,
+        signedData,
+        signedHash,
       });
       const result = modelFromServer(response.result);
       if (this._store.getById(result.id)) {
@@ -208,6 +226,7 @@ class CommentsController {
 
   public async delete(comment) {
     return new Promise((resolve, reject) => {
+      const { signature } = app.sessions.signDeleteComment(wallet, { hash: comment.signedHash })
       // TODO: Change to DELETE /comment
       $.post(`${app.serverUrl()}/deleteComment`, {
         jwt: app.user.jwt,

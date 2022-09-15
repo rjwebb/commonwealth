@@ -8,7 +8,7 @@
     "build-scripts": "tsc --project server/tsconfig.json && tsc-alias --project server/tsconfig.json",
     "build:css": "NODE_ENV=production build client/styles/shared.scss",
     "bundle-report": "webpack-bundle-analyzer --port 4200 build/stats.json",
-    "check-types": "tsc --noEmit && tsc --project server/tsconfig.json --noEmit",
+    "check-types": "tsc --noEmit",
     "stylelint": "stylelint client/styles/*",
     "lint": "./scripts/lint-new-work.sh",
     "lint-all": "eslint client/\\**/*.ts server/\\**/*.ts",
