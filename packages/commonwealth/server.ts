@@ -192,6 +192,9 @@ async function main() {
     // redirect from commonwealthapp.herokuapp.com to commonwealth.im
     app.all(/.*/, (req, res, next) => {
       const host = req.header('host');
+
+      // For development only - need to figure out prod solution
+      res.header('Access-Control-Allow-Origin', '*');
       if (host.match(/commonwealthapp.herokuapp.com/i)) {
         res.redirect(301, `https://commonwealth.im${req.url}`);
       } else {

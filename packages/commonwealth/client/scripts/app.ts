@@ -53,12 +53,15 @@ export async function initAppState(
   customDomain = null
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    $.get(`${app.serverUrl()}/status`)
+    $.get(`http://localhost:8080${app.serverUrl()}/status`)
       .then(async (data) => {
+        // print the origin
+        console.log(`App origin: ${window.location.origin}`);
+        console.log('app.serverUrl()', app.serverUrl());
         app.config.chains.clear();
         app.config.nodes.clear();
-        app.user.notifications.clear();
-        app.user.notifications.clearSubscriptions();
+        // app.user.notifications.clear();
+        // app.user.notifications.clearSubscriptions();
         data.nodes
           .sort((a, b) => a.id - b.id)
           .map((node) => {
@@ -861,6 +864,7 @@ Promise.all([$.ready, $.get('/api/domain')]).then(
             //
             // Global routes
             //
+            // '/': redirectRoute(() => '/dydx/'),
             '/': importRoute('views/pages/landing', {
               scoped: false,
               hideSidebar: false,
