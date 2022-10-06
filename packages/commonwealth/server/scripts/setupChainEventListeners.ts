@@ -64,7 +64,11 @@ export const generateHandlers = (
   storageConfig: StorageFilterConfig = {}
 ) => {
   // writes events into the db as ChainEvents rows
-  const storageHandler = new EventStorageHandler(models, chain.id, storageConfig);
+  const storageHandler = new EventStorageHandler(
+    models,
+    chain.id,
+    storageConfig
+  );
 
   // emits notifications by writing into the db's Notifications table, and also optionally
   // sending a notification to the client via websocket
@@ -76,7 +80,11 @@ export const generateHandlers = (
   );
 
   // creates and updates ChainEntity rows corresponding with entity-related events
-  const entityArchivalHandler = new EntityArchivalHandler(models, chain.id, wss);
+  const entityArchivalHandler = new EntityArchivalHandler(
+    models,
+    chain.id,
+    wss
+  );
 
   // creates empty Address and OffchainProfile models for users who perform certain
   // actions, like voting on proposals or registering an identity
@@ -149,9 +157,7 @@ const setupChainEventListeners = async (
   log.info('Setting up event listeners...');
   const subscribers = await Promise.all(
     nodes.map(
-      async (
-        node,
-      ): Promise<[ChainInstance, IEventSubscriber<any, any>]> => {
+      async (node): Promise<[ChainInstance, IEventSubscriber<any, any>]> => {
         let subscriber: IEventSubscriber<any, any>;
         if (node.base === ChainBase.Substrate) {
           const nodeUrl = constructSubstrateUrl(node.ChainNode.url);
@@ -198,8 +204,13 @@ const setupChainEventListeners = async (
           });
         } else if (node.network === ChainNetwork.Compound) {
           // @TODO: @JAKE @CONTRACTS: fetch governance contract specifically
-          const contracts = await node.getContracts({ include: [{ model: models.ChainNode, required: true, }]});
-          const api = await CompoundEvents.createApi(contracts[0].ChainNode.url, contracts[0].address);
+          const contracts = await node.getContracts({
+            include: [{ model: models.ChainNode, required: true }],
+          });
+          const api = await CompoundEvents.createApi(
+            contracts[0].ChainNode.url,
+            contracts[0].address
+          );
           const handlers = generateHandlers(node, wss);
           subscriber = await CompoundEvents.subscribeEvents({
             chain: node.id,
@@ -210,8 +221,15 @@ const setupChainEventListeners = async (
           });
         } else if (node.network === ChainNetwork.Aave) {
           // @TODO: @JAKE @CONTRACTS: fetch governance contract specifically
-          const contracts = await node.getContracts({ include: [{ model: models.ChainNode, required: true, }]});
-          const api = await AaveEvents.createApi(contracts[0].ChainNode.url, contracts[0].address);
+          const contracts = await node.getContracts({
+            include: [{ model: models.ChainNode, required: true }],
+          });
+          const api = await AaveEvents.createApi(
+            contracts[0].ChainNode.url,
+            contracts[0].address,
+            10000,
+            node.id
+          );
           const handlers = generateHandlers(node, wss);
           subscriber = await AaveEvents.subscribeEvents({
             chain: node.id,

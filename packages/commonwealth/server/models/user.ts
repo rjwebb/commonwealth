@@ -24,6 +24,7 @@ export type UserAttributes = {
   selected_chain_id?: number;
   created_at?: Date;
   updated_at?: Date;
+  browser_notifications_enabled?: boolean;
 
   // associations (see https://vivacitylabs.com/setup-typescript-sequelize/)
   selectedChain?: ChainAttributes | ChainAttributes['id'];
@@ -103,6 +104,10 @@ export default (
         allowNull: false,
       },
       selected_chain_id: { type: dataTypes.STRING, allowNull: true },
+      browser_notifications_enabled: {
+        type: dataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
     {
       timestamps: true,
@@ -120,6 +125,7 @@ export default (
             'isAdmin',
             'created_at',
             'updated_at',
+            'browser_notifications_enabled',
           ],
         },
       },
@@ -153,7 +159,6 @@ export default (
     models.User.hasMany(models.Profile);
     models.User.hasMany(models.SocialAccount);
     models.User.hasMany(models.StarredCommunity);
-    models.User.hasMany(models.IpfsPins);
     models.User.belongsToMany(models.Chain, {
       through: models.WaitlistRegistration,
     });

@@ -3,8 +3,13 @@ import $ from 'jquery';
 import m from 'mithril';
 
 import { NotificationStore } from 'stores';
-import { NotificationSubscription, Notification, ChainEventType } from 'models';
+import {
+  NotificationSubscription,
+  Notification as CWNotification,
+  ChainEventType,
+} from 'models';
 import { modelFromServer } from 'models/NotificationSubscription';
+import { CWEvent, Label as ChainEventLabel } from 'chain-events/src';
 
 import app from 'state';
 
@@ -32,11 +37,11 @@ const get = (route, args, callback) => {
       }
     })
     .catch((e) => console.error(e));
-}
+};
 
 interface NotifOptions {
-  chain_filter: string,
-  maxId: number
+  chain_filter: string;
+  maxId: number;
 }
 class NotificationsController {
   private _discussionStore: NotificationStore = new NotificationStore();
@@ -56,15 +61,15 @@ class NotificationsController {
     return this._numUnread;
   }
 
-  public get discussionNotifications(): Notification[] {
+  public get discussionNotifications(): CWNotification[] {
     return this._discussionStore.getAll();
   }
 
-  public get chainEventNotifications(): Notification[] {
+  public get chainEventNotifications(): CWNotification[] {
     return this._chainEventStore.getAll();
   }
 
-  public get allNotifications(): Notification[] {
+  public get allNotifications(): CWNotification[] {
     return this._discussionStore
       .getAll()
       .concat(this._chainEventStore.getAll());
@@ -168,6 +173,74 @@ class NotificationsController {
     );
   }
 
+  public async updateBrowserNotificationsStatus(enabled: boolean) {
+    try {
+      await $.post(`${app.serverUrl()}/setBrowserNotifications`, {
+        enabled,
+        jwt: app.user.jwt,
+      });
+      app.user.setBrowserNotificationsEnabled(enabled);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  public async requestBrowserNotifications(): Promise<NotificationPermission> {
+    try {
+      const status = await Notification.requestPermission();
+      if (status === 'granted') {
+        console.log('browser notification permissions granted');
+        await this.updateBrowserNotificationsStatus(true);
+      } else {
+        await this.updateBrowserNotificationsStatus(false);
+        console.log('browser notification permissions disabled');
+      }
+
+      return status;
+    } catch (e) {
+      console.log(e);
+      return 'denied';
+    }
+  }
+
+  public fireBrowserNotification(
+    title: string,
+    body: string,
+    tag: string,
+    onclick?: () => void
+  ) {
+    const notification = new Notification(title, {
+      body,
+      tag,
+      icon: `favicon.ico`,
+    });
+    notification.onclick = onclick;
+
+    // Close after 4 seconds
+    setTimeout(() => {
+      notification.close();
+    }, 6000);
+  }
+
+  public fireChainEventBrowserNotification(notification: CWNotification) {
+    const chainId = notification.chainEvent.type.chain;
+
+    // construct compatible CW event from DB by inserting network from type
+    const chainEvent: CWEvent = {
+      blockNumber: notification.chainEvent.blockNumber,
+      network: notification.chainEvent.type.eventNetwork,
+      data: notification.chainEvent.data,
+    };
+    const chainName = app.config.chains.getById(chainId)?.name;
+    const label = ChainEventLabel(chainId, chainEvent);
+
+    this.fireBrowserNotification(
+      `${label.heading} on ${chainName}`,
+      `Block ${notification.chainEvent.blockNumber}`,
+      'default_tag'
+    );
+  }
+
   public deleteSubscription(subscription: NotificationSubscription) {
     // TODO: Change to DELETE /subscription
     return post(
@@ -189,7 +262,7 @@ class NotificationsController {
     );
   }
 
-  public markAsRead(notifications: Notification[]) {
+  public markAsRead(notifications: CWNotification[]) {
     // TODO: Change to PUT /notificationsRead
     const MAX_NOTIFICATIONS_READ = 100; // mark up to 100 notifications read at a time
     const unreadNotifications = notifications.filter((notif) => !notif.isRead);
@@ -232,7 +305,7 @@ class NotificationsController {
     else this._discussionStore.remove(n);
   }
 
-  public delete(notifications: Notification[]) {
+  public delete(notifications: CWNotification[]) {
     // TODO: Change to PUT /clearNotifications
     const MAX_NOTIFICATIONS_CLEAR = 100; // delete up to 100 notifications at a time
 
@@ -256,9 +329,13 @@ class NotificationsController {
     );
   }
 
-  public update(n: Notification) {
+  public update(n: CWNotification) {
+    console.log('notif', n);
     if (n.chainEvent && !this._chainEventStore.getById(n.id)) {
       this._chainEventStore.add(n);
+      console.log('chain even notif came in', n);
+      if (app.user.browserNotificationsEnabled)
+        this.fireChainEventBrowserNotification(n);
       m.redraw();
     } else if (!n.chainEvent && !this._discussionStore.getById(n.id)) {
       this._discussionStore.add(n);
@@ -274,7 +351,7 @@ class NotificationsController {
   }
 
   public sortNotificationsStore(storeType: string) {
-    if (storeType == 'chain-events') {
+    if (storeType === 'chain-events') {
       const unsortedNotifications = this.chainEventNotifications;
       this._chainEventStore.clear();
       unsortedNotifications.sort((a, b) => b.id - a.id);
@@ -296,7 +373,7 @@ class NotificationsController {
 
     const options: NotifOptions = app.isCustomDomain()
       ? { chain_filter: app.activeChainId(), maxId: undefined }
-      : { chain_filter: undefined, maxId: undefined};
+      : { chain_filter: undefined, maxId: undefined };
 
     if (this._maxChainEventNotificationId !== Number.POSITIVE_INFINITY)
       options.maxId = this._maxChainEventNotificationId;
@@ -348,7 +425,7 @@ class NotificationsController {
           is_read: notificationsReadJSON.is_read,
           ...notificationsReadJSON.Notification,
         };
-        const notification = Notification.fromJSON(
+        const notification = CWNotification.fromJSON(
           data,
           subscription,
           chainEventType
@@ -360,14 +437,16 @@ class NotificationsController {
           // the minimum id is the new max id for next page
           if (notificationsReadJSON.id < this._maxChainEventNotificationId) {
             this._maxChainEventNotificationId = notificationsReadJSON.id;
-            if (notificationsReadJSON.id === 1) this._maxChainEventNotificationId = 0;
+            if (notificationsReadJSON.id === 1)
+              this._maxChainEventNotificationId = 0;
           }
         } else {
           if (!this._discussionStore.getById(notification.id))
             this._discussionStore.add(notification);
           if (notificationsReadJSON.id < this._maxDiscussionNotificationId) {
             this._maxDiscussionNotificationId = notificationsReadJSON.id;
-            if (notificationsReadJSON.id === 1) this._maxDiscussionNotificationId = 0;
+            if (notificationsReadJSON.id === 1)
+              this._maxDiscussionNotificationId = 0;
           }
         }
       }
@@ -381,9 +460,7 @@ class NotificationsController {
       this._subscriptions = [];
 
       const subs = result;
-      subs.forEach((sub) =>
-      this._subscriptions.push(modelFromServer(sub))
-    );
+      subs.forEach((sub) => this._subscriptions.push(modelFromServer(sub)));
     });
   }
 
