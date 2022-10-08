@@ -248,6 +248,52 @@ You should now set up any databases and services needed. In particular:
   `SEND_EMAILS=true ts-node --project tsconfig.node.json server.ts`
   at 1pm UTC / 6am PT / 9am ET / 3pm CEST
 
+## Developing for iOS and Android with Capacitor
+
+Make sure you also `npm install -g @capacitor/cli`
+
+The following command should be run to create build directories for both iOS and Android
+
+For iOS development, you will need to enable xcode-select via install XCode or XCodeTerminal (macOS only)
+For Android Studios, you will need to download and install Android Studios.
+
+```
+yarn run add-capacitor 
+```
+
+Following the command, you may need to edit the Podfile to account for the monorepo.
+
+```
+cd ios/App
+sed -i '1 srequire_relative '../../../../node_modules/@capacitor/ios/scripts/pods_helpers' Podfile
+pod install
+cd ../..
+
+```
+
+You will need to that the application server like normal using `yarn start` to get the mobile apps to run
+
+Use the following commands to sync and build
+
+```
+    "build-ios": "yarn run build && npx cap sync ios",
+    "build-android": "yarn run build && npx cap sync android",
+    "start-ios": "npx cap run ios",
+    "start-android": "npx cap run android",
+```
+
+Use the following commands to open XCode or Android Studio respectively. 
+You will now run the simulator directly from the IDEs.
+```
+    "open-ios": "npx cap open ios",
+    "open-android": "npx cap open ios",
+```
+
+For development on a mobile app, we will need to set the client to send requests to the app server (external IP).
+
+
+
+
 ## Custom Domains
 
 To configure a custom domain, you should:
