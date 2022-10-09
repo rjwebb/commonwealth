@@ -53,9 +53,10 @@ export async function initAppState(
   customDomain = null
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    $.get(`http://localhost:8080${app.serverUrl()}/status`)
+    $.get(`${app.serverUrl()}/status`)
       .then(async (data) => {
-        // print the origin
+        // Print Server and Client Information
+        console.log(`App is Native: ${app.isNative(window)}`);
         console.log(`App origin: ${window.location.origin}`);
         console.log('app.serverUrl()', app.serverUrl());
         app.config.chains.clear();

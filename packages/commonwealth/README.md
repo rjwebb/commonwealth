@@ -261,39 +261,37 @@ For Android Studios, you will need to download and install Android Studios.
 yarn run add-capacitor 
 ```
 
-Following the command, you may need to edit the Podfile to account for the monorepo.
+Following the command, you may need to edit the Podfile to account for the monorepo, if Podfile Dependecies have not been correctly added.
 
 ```
 cd ios/App
-sed -i '1 srequire_relative '../../../../node_modules/@capacitor/ios/scripts/pods_helpers' Podfile
+sed -i '1 s'#..\/..\/#..\/..\/..\/..\/#' Podfile
 pod install
 cd ../..
 
 ```
 
-You will need to that the application server like normal using `yarn start` to get the mobile apps to run
+You will need to that the application server `NODE_ENV=mobile yarn start` to act as the mobile app server.
 
-Use the following commands to sync and build
+Use the following `yarn` commands to sync and build the `client` directory to the build director
 
 ```
-    "build-ios": "yarn run build && npx cap sync ios",
-    "build-android": "yarn run build && npx cap sync android",
+    "build-ios": 
+    "build-android": 
     "start-ios": "npx cap run ios",
     "start-android": "npx cap run android",
 ```
 
-Use the following commands to open XCode or Android Studio respectively. 
-You will now run the simulator directly from the IDEs.
+Please note, you will need to pull your local service (external IP address) to set the `SERVER_URL` env var.
+Additionally, will need to edit the `server.url` entry in `capacitor.config.ts` for case `mobile` with the your device external IP address. 
+
+By default, we use `NODE_ENV=mobile` to run `yarn build-ios` and `yarn build-android` respectively. This `NODE_ENV` will enable live reloads by default for changes to the `client`. If you change `server` files, you will need to "re run" the app.
+
+You can also open the app directly from XCode or Android Studio and more!
 ```
     "open-ios": "npx cap open ios",
     "open-android": "npx cap open ios",
 ```
-
-For development on a mobile app, we will need to set the client to send requests to the app server (external IP).
-
-
-
-
 ## Custom Domains
 
 To configure a custom domain, you should:
