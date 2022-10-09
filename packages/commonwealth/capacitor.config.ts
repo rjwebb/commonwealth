@@ -13,6 +13,9 @@ const baseConfig: CapacitorConfig = {
       "launchAutoHide": true,
     }
   },
+  ios: {
+    allowsLinkPreview: true
+  }
 };
 
 switch (process.env.NODE_ENV) {
