@@ -182,7 +182,7 @@ export class CWWalletsList implements m.ClassComponent<WalletsListAttrs> {
           validationBlockInfo
         );
       const signature = await wallet.signWithAccount(account);
-      await wallet.validateWithAccount(account, signature); // do we need this?
+      await wallet.validateWithAccount(account, signature);
       console.log('success', account, signature);
     }
 

@@ -63,9 +63,10 @@ class MetamaskWebWalletController implements IWebWallet<string> {
 
   public async signLoginToken(validationBlockInfo: string): Promise<string> {
     const sessionPublicAddress = app.sessions.getOrCreateAddress(app.chain?.meta.node.ethChainId || 1);
-    const msgParams = await constructTypedMessage(
+    const chainId = app.chain?.meta.node.ethChainId || 1;
+    const { msgParams, sessionPayload } = await constructTypedMessage(
       this.accounts[0],
-      app.chain?.meta.node.ethChainId || 1,
+      chainId,
       sessionPublicAddress,
       validationBlockInfo,
     );
@@ -73,6 +74,7 @@ class MetamaskWebWalletController implements IWebWallet<string> {
       method: 'eth_signTypedData_v4',
       params: [this._accounts[0], JSON.stringify(msgParams)],
     });
+    app.sessions.updateSessionPayload(chainId, sessionPayload)
     return signature;
   }
 
