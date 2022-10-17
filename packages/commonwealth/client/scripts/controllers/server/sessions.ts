@@ -13,7 +13,7 @@ class SessionsController {
   sessions: Record<string, { sessionPayload: SessionPayload | null, wallet: ethers.Wallet }>;
 
   constructor() {
-    this.wallets = {}
+    this.sessions = {}
   }
 
   public getAddress(chainId: number): string | null {
