@@ -38,13 +38,14 @@ class ReactionCountController {
     chainId: string
   ) {
     // TODO: use canvas id
+    const like = reaction === "like";
     const { signature, sessionData, actionData, signedHash } =
       post instanceof Thread
-      ? app.sessions.signThreadReaction(wallet, { reaction, (post as Thread).id })
+      ? app.sessions.signThreadReaction(wallet, { threadId: (post as Thread).id, like })
       : post instanceof Proposal
       ? {}
       : post instanceof Comment
-      ? app.sessions.signCommentReaction(wallet, { reaction, (post as Comment<any>).id }) : {};
+      ? app.sessions.signCommentReaction(wallet, { threadId: (post as Comment<any>).id, like }) : {};
 
     const options = {
       author_chain: app.user.activeAccount.chain.id,
