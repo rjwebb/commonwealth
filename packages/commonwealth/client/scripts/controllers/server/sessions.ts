@@ -60,9 +60,9 @@ class SessionsController {
     sessionData: SessionPayload,
     actionData: ActionPayload
   }> {
-    if (args.some((arg) => arg === undefined)) {
-      throw new Error("args cannot be undefined")
-    }
+    args.map((arg, idx) => {
+      if (arg === undefined) args[idx] = '';
+    });
     const chainId = app.chain?.meta.node.ethChainId || 1;
     if (!this.sessions[chainId]) throw new Error("Invalid signer");
     const { walletSigner, sessionPayload, blockInfo } = this.sessions[chainId];
@@ -93,45 +93,45 @@ class SessionsController {
   // public signer methods
 
   public async signThread({ community, title, body, link, topic }) {
-    const { signature, sessionData, actionData, id } = this.sign("thread", community || '', title, body, link || '', topic || '');
+    const { signature, sessionData, actionData, id } = await this.sign("thread", community || '', title, body, link || '', topic || '');
     return { signature, sessionData, actionData, id }
   }
 
   public async signDeleteThread({ id }) {
-    const { signature, signedData } = this.sign("deleteThread", id);
-    return { signature }
+    const { signature, sessionData, actionData } = await this.sign("deleteThread", id);
+    return { signature, sessionData, actionData }
   }
 
   public async signComment({ community, threadId, parentCommentId, text }) {
-    const { signature, sessionData, actionData, id } = this.sign("comment", threadId, text, parentCommentId);
+    const { signature, sessionData, actionData, id } = await this.sign("comment", threadId, text, parentCommentId || '');
     return { signature, sessionData, actionData, id }
   }
 
   public async signDeleteComment({ id }) {
-    const { signature, signedData } = this.sign("deleteComment", id);
-    return { signature }
+    const { signature, sessionData, actionData } = await this.sign("deleteComment", id);
+    return { signature, sessionData, actionData }
   }
 
   public async signThreadReaction({ threadId, like }) {
     const reaction = like ? "like" : "dislike";
-    const { signature, sessionData, actionData, id } = this.sign("reactThread", reaction, threadId);
+    const { signature, sessionData, actionData, id } = await this.sign("reactThread", reaction, threadId);
     return { signature, sessionData, actionData, id }
   }
 
   public async signDeleteThreadReaction({ id }) {
-    const { signature, signedData } = this.sign("unreactThread", id);
-    return { signature }
+    const { signature, sessionData, actionData } = await this.sign("unreactThread", id);
+    return { signature, sessionData, actionData }
   }
 
   public async signCommentReaction({ commentId, like }) {
     const reaction = like ? "like" : "dislike";
-    const { signature, sessionData, actionData, id } = this.sign("reactComment", reaction, commentId);
+    const { signature, sessionData, actionData, id } = await this.sign("reactComment", reaction, commentId);
     return { signature, sessionData, actionData, id }
   }
 
   public async signDeleteCommentReaction({ id }) {
-    const { signature, signedData } = this.sign("unreactComment", id);
-    return { signature }
+    const { signature, sessionData, actionData } = await this.sign("unreactComment", id);
+    return { signature, sessionData, actionData }
   }
 }
 

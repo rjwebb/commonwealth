@@ -56,7 +56,9 @@ export class DiscussionRowReactionButton
       });
 
       await app.sessions.ensureSessionIsValid();
-      const { signature } = await app.sessions.signDeleteThreadReaction({ id: reaction.canvasId });
+      const { signature } = await app.sessions.signDeleteThreadReaction({
+        id: reaction.canvasId
+      });
 
       this.loading = true;
       app.reactionCounts
@@ -75,8 +77,12 @@ export class DiscussionRowReactionButton
     };
 
     const like = async (chain: ChainInfo, chainId: string, userAddress: string) => {
-      await sessionSigninModal();
-      const { signature, sessionData, actionData, id } = await app.sessions.signThreadReaction({ threadId, like: true });
+      await app.sessions.ensureSessionIsValid();
+      const { signature, sessionData, actionData, id } = await app.sessions.signThreadReaction({
+        threadId:
+        thread.id,
+        like: true
+      });
 
       this.loading = true;
       app.reactionCounts

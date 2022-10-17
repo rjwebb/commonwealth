@@ -65,12 +65,6 @@ export class CreateComment implements m.ClassComponent<CreateCommmentAttrs> {
       const chainId = app.activeChainId();
 
       await app.sessions.ensureSessionIsValid();
-      const { signature, sessionData, actionData, id } = app.sessions.signComment({
-        community: chainId,
-        threadId: rootProposal.uniqueIdentifier,
-        parentCommentId: proposalPageState.parentCommentId,
-        text: commentText
-      });
 
       this.error = null;
 

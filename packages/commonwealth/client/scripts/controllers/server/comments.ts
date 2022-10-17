@@ -152,9 +152,13 @@ class CommentsController {
     attachments?: string[]
   ) {
     try {
-      // TODO wallet
-      const { signature, sessionData, actionData, signedHash } = app.sessions.signComment({ text: unescapedText, parent: parentCommentId })
-      const signedData = JSON.stringify({ sessionData, actionData })
+      const { signature, sessionData, actionData, signedHash } = await app.sessions.signComment({
+        community: chain,
+        threadId: proposalIdentifier,
+        text: unescapedText,
+        parent: parentCommentId,
+      });
+      const signedData = JSON.stringify({ sessionData, actionData });
 
       // TODO: Change to POST /comment
       const res = await $.post(`${app.serverUrl()}/createComment`, {
@@ -194,8 +198,11 @@ class CommentsController {
     const newBody = body || comment.text;
     try {
       // TODO: Change to PUT /comment
-      const { signature, sessionData, actionData, signedHash, } = app.sessions.signComment({ text: body, parent: comment.parentCommentId })
-      const signedData = JSON.stringify({ sessionData, actionData })
+      const { signature, sessionData, actionData, signedHash, } = await app.sessions.signComment({
+        text: body,
+        parent: comment.parentCommentId
+      });
+      const signedData = JSON.stringify({ sessionData, actionData });
       const response = await $.post(`${app.serverUrl()}/editComment`, {
         address: app.user.activeAccount.address,
         author_chain: app.user.activeAccount.chain.id,
@@ -225,8 +232,10 @@ class CommentsController {
   }
 
   public async delete(comment) {
+    const { signature } = await app.sessions.signDeleteComment({
+      hash: comment.signedHash
+    });
     return new Promise((resolve, reject) => {
-      const { signature } = app.sessions.signDeleteComment({ hash: comment.signedHash })
       // TODO: Change to DELETE /comment
       $.post(`${app.serverUrl()}/deleteComment`, {
         jwt: app.user.jwt,

@@ -78,9 +78,8 @@ export class CommentReactionButton
     };
 
     const like = async (chain: ChainInfo, chainId: string, userAddress: string) => {
-      // TODO wallet
-      await sessionSigninModal();
-      const { signature, sessionData, actionData, id } = await app.sessions.signCommentReaction({ commentId, like: true });
+      await app.sessions.ensureSessionIsValid();
+      const { signature, sessionData, actionData, id } = await app.sessions.signCommentReaction({ commentId: comment.id, like: true });
 
       this.loading = true;
       app.reactionCounts

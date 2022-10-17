@@ -76,8 +76,8 @@ export class ThreadReactionButton
     };
 
     const like = async (chain: ChainInfo, chainId: string, userAddress: string) => {
-      await sessionSigninModal();
-      const { signature, sessionData, actionData, id } = await app.sessions.signThreadReaction({ threadId, like: true });
+      await app.sessions.ensureSessionIsValid();
+      const { signature, sessionData, actionData, id } = await app.sessions.signThreadReaction({ threadId: thread.id, like: true });
 
       this.loading = true;
       app.reactionCounts
