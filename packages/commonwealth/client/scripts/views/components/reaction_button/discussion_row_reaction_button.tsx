@@ -7,7 +7,6 @@ import 'components/reaction_button/discussion_row_reaction_button.scss';
 
 import app from 'state';
 import TopicGateCheck from 'controllers/chain/ethereum/gatedTopic';
-import { sessionSigninModal } from 'views/modals/session_signin_modal';
 import { Thread, ChainInfo } from 'models';
 import { CWIcon } from '../component_kit/cw_icons/cw_icon';
 import {
@@ -56,8 +55,8 @@ export class DiscussionRowReactionButton
         return r.Address.address === activeAddress;
       });
 
-      await sessionSigninModal();
-      const { signature } = await app.sessions.signDeleteThreadReaction(wallet, { id: reaction.canvasId });
+      await app.sessions.ensureSessionIsValid();
+      const { signature } = await app.sessions.signDeleteThreadReaction({ id: reaction.canvasId });
 
       this.loading = true;
       app.reactionCounts
@@ -77,7 +76,7 @@ export class DiscussionRowReactionButton
 
     const like = async (chain: ChainInfo, chainId: string, userAddress: string) => {
       await sessionSigninModal();
-      const { signature, sessionData, actionData, id } = await app.sessions.signThreadReaction(wallet, { threadId, like: true });
+      const { signature, sessionData, actionData, id } = await app.sessions.signThreadReaction({ threadId, like: true });
 
       this.loading = true;
       app.reactionCounts

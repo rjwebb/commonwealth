@@ -255,7 +255,7 @@ class ThreadsController {
   ) {
     try {
       // TODO: Change to POST /thread
-      const { signature, signedData, signedHash } = app.sessions.signThread(wallet, { title, body, link: url })
+      const { signature, signedData, signedHash } = app.sessions.signThread({ title, body, link: url })
       const response = await $.post(`${app.serverUrl()}/createThread`, {
         author_chain: app.user.activeAccount.chain.id,
         author: JSON.stringify(app.user.activeAccount.profile),
@@ -320,7 +320,7 @@ class ThreadsController {
   ) {
     const newBody = body || proposal.body;
     const newTitle = title || proposal.title;
-    const { signature, signedData, signedHash } = app.sessions.signThread(wallet, { title: newTitle, body: newBody, link: url })
+    const { signature, signedData, signedHash } = app.sessions.signThread({ title: newTitle, body: newBody, link: url })
 
     await $.ajax({
       url: `${app.serverUrl()}/editThread`,
@@ -364,7 +364,7 @@ class ThreadsController {
   }
 
   public async delete(proposal) {
-    const { signature } = app.sessions.signDeleteThread(wallet, { signedHash: proposal.signedHash })
+    const { signature } = app.sessions.signDeleteThread({ signedHash: proposal.signedHash })
 
     return new Promise((resolve, reject) => {
       // TODO: Change to DELETE /thread

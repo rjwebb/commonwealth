@@ -6,7 +6,6 @@ import 'components/reaction_button/comment_reaction_button.scss';
 
 import app from 'state';
 import TopicGateCheck from 'controllers/chain/ethereum/gatedTopic';
-import { sessionSigninModal } from 'views/modals/session_signin_modal';
 import { Comment, ChainInfo } from 'models';
 import {
   fetchReactionsByPost,
@@ -59,9 +58,8 @@ export class CommentReactionButton
         return r.Address.address === activeAddress;
       });
 
-      // TODO wallet
-      await sessionSigninModal();
-      const { signature } = await app.sessions.signDeleteCommentReaction(wallet, { id: reaction.canvasId });
+      await app.sessions.ensureSessionIsValid();
+      const { signature } = await app.sessions.signDeleteCommentReaction({ id: reaction.canvasId });
 
       this.loading = true;
       app.reactionCounts
@@ -82,7 +80,7 @@ export class CommentReactionButton
     const like = async (chain: ChainInfo, chainId: string, userAddress: string) => {
       // TODO wallet
       await sessionSigninModal();
-      const { signature, sessionData, actionData, id } = await app.sessions.signCommentReaction(wallet, { commentId, like: true });
+      const { signature, sessionData, actionData, id } = await app.sessions.signCommentReaction({ commentId, like: true });
 
       this.loading = true;
       app.reactionCounts

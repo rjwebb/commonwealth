@@ -41,11 +41,11 @@ class ReactionCountController {
     const like = reaction === "like";
     const { signature, sessionData, actionData, signedHash } =
       post instanceof Thread
-      ? app.sessions.signThreadReaction(wallet, { threadId: (post as Thread).id, like })
+      ? app.sessions.signThreadReaction({ threadId: (post as Thread).id, like })
       : post instanceof Proposal
       ? {}
       : post instanceof Comment
-      ? app.sessions.signCommentReaction(wallet, { threadId: (post as Comment<any>).id, like }) : {};
+      ? app.sessions.signCommentReaction({ threadId: (post as Comment<any>).id, like }) : {};
 
     const options = {
       author_chain: app.user.activeAccount.chain.id,
@@ -105,7 +105,7 @@ class ReactionCountController {
   }
 
   public async delete(reaction, reactionCount: ReactionCount<any>) {
-    const { signature } = app.sessions.signDeleteReaction(wallet, { reaction: reaction.reaction, signedHash: reaction.signedHash })
+    const { signature } = app.sessions.signDeleteReaction({ reaction: reaction.reaction, signedHash: reaction.signedHash })
 
     // TODO Graham 4/24/22: Investigate necessity of this duplication
     const _this = this;

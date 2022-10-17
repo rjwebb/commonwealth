@@ -10,7 +10,6 @@ import { Thread, AnyProposal } from 'models';
 import { ChainNetwork } from 'common-common/src/types';
 import { ContentType } from 'types';
 import { CommentParent } from 'controllers/server/comments';
-import { sessionSigninModal } from 'views/modals/session_signin_modal';
 import { EditProfileModal } from 'views/modals/edit_profile_modal';
 import { QuillEditorComponent } from 'views/components/quill/quill_editor_component';
 import { QuillEditor } from 'views/components/quill/quill_editor';
@@ -65,9 +64,8 @@ export class CreateComment implements m.ClassComponent<CreateCommmentAttrs> {
       const commentText = this.quillEditorState.textContentsAsString;
       const chainId = app.activeChainId();
 
-      // TODO wallet
-      await sessionSigninModal();
-      const { signature, sessionData, actionData, id } = app.sessions.signComment(wallet, {
+      await app.sessions.ensureSessionIsValid();
+      const { signature, sessionData, actionData, id } = app.sessions.signComment({
         community: chainId,
         threadId: rootProposal.uniqueIdentifier,
         parentCommentId: proposalPageState.parentCommentId,

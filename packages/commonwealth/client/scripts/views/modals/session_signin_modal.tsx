@@ -36,25 +36,13 @@ const SessionSigninModal = {
           <div>
             <CWWalletsList
               useSessionKeyLoginFlow={true}
-              connectAnotherWayOnclick={() => console.log('connectAnotherWayOnclick')}
               wallets={wallets}
-              darkMode={false} //?
-              setSelectedWallet={() => console.log('setSelectedWallet')}
-              setProfiles={() => console.log('setProfiles')}
-              setSidebarType={() => console.log('setSidebarType')}
-              setBodyType={() => console.log('setBodyType')}
-              accountVerifiedCallback={() => console.log('accountVerifiedCallback')}
-              linking={false} //?
+              darkMode={false}
+              setSelectedWallet={(wallet) => { /* do nothing */ }}
+              accountVerifiedCallback={(account) => $(vnode.dom).trigger('modalcomplete') }
+              linking={false}
               hideConnectAnotherWayLink={true}
             />
-           {/* <CWButton
-              buttonType="secondary-blue"
-              onclick={(e) => {
-                e.preventDefault();
-                $(e.target).trigger('modalexit');
-              }}
-              label="Cancel"
-            />*/}
           </div>
         </div>
       </div>

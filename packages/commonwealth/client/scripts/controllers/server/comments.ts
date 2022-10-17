@@ -153,7 +153,7 @@ class CommentsController {
   ) {
     try {
       // TODO wallet
-      const { signature, sessionData, actionData, signedHash } = app.sessions.signComment(wallet, { text: unescapedText, parent: parentCommentId })
+      const { signature, sessionData, actionData, signedHash } = app.sessions.signComment({ text: unescapedText, parent: parentCommentId })
       const signedData = JSON.stringify({ sessionData, actionData })
 
       // TODO: Change to POST /comment
@@ -194,7 +194,7 @@ class CommentsController {
     const newBody = body || comment.text;
     try {
       // TODO: Change to PUT /comment
-      const { signature, sessionData, actionData, signedHash, } = app.sessions.signComment(wallet, { text: body, parent: comment.parentCommentId })
+      const { signature, sessionData, actionData, signedHash, } = app.sessions.signComment({ text: body, parent: comment.parentCommentId })
       const signedData = JSON.stringify({ sessionData, actionData })
       const response = await $.post(`${app.serverUrl()}/editComment`, {
         address: app.user.activeAccount.address,
@@ -226,7 +226,7 @@ class CommentsController {
 
   public async delete(comment) {
     return new Promise((resolve, reject) => {
-      const { signature } = app.sessions.signDeleteComment(wallet, { hash: comment.signedHash })
+      const { signature } = app.sessions.signDeleteComment({ hash: comment.signedHash })
       // TODO: Change to DELETE /comment
       $.post(`${app.serverUrl()}/deleteComment`, {
         jwt: app.user.jwt,

@@ -1,5 +1,7 @@
+import app from 'state';
 import { ethers } from 'ethers';
 import { BlockInfo, IWebWallet } from 'models';
+import { sessionSigninModal } from 'views/modals/session_signin_modal';
 
 import {
   Block as CanvasBlock,
@@ -16,6 +18,15 @@ class SessionsController {
     this.sessions = {}
   }
 
+  // Check for the current session key for a chain, and prompt for re-login if necessary.
+  public async ensureSessionIsValid(): Promise {
+    const chainId = app.chain?.meta.node.ethChainId || 1;
+    if (!this.sessions[chainId]) {
+      await sessionSigninModal()
+    }
+  }
+
+  // Get the current session key for a chain.
   public getAddress(chainId: number): string | null {
     return this.sessions[chainId]?.wallet.address;
   }
@@ -39,13 +50,13 @@ class SessionsController {
     this.sessions[chainId].sessionPayload = sessionPayload;
   }
 
-  // Sign an arbitrary action.
-  private async sign(wallet: IWebWallet, call, ...args): Promise<{
+  // Sign an arbitrary action. Always call ensureSessionIsValid() right before sign().
+  private async sign(call, ...args): Promise<{
     sessionData: SessionPayload,
     actionData: ActionPayload
   }> {
+    const chainId = app.chain?.meta.node.ethChainId || 1;
     if (!this.sessions[chainId]?.wallet || !this.sessions[chainId]?.sessionPayload) throw new Error("Invalid signer");
-    // we should never get this error, since this.sign() should only be called *immediately* after revalidating session
 
     const blockInfo: BlockInfo = await wallet.getRecentBlock();
 		const timestamp = +Date.now(); // get a new timestamp, from after we have secured a session
@@ -67,45 +78,45 @@ class SessionsController {
 
   // public signer methods
 
-  public async signThread(wallet: IWebWallet, { community, title, body, link, topic }) {
-    const { signature, sessionData, actionData, id } = this.sign(wallet, "thread", community, title, body, link, topic);
+  public async signThread({ community, title, body, link, topic }) {
+    const { signature, sessionData, actionData, id } = this.sign("thread", community, title, body, link, topic);
     return { signature, sessionData, actionData, id }
   }
 
-  public async signDeleteThread(wallet: IWebWallet, { id }) {
-    const { signature, signedData } = this.sign(wallet, "deleteThread", id);
+  public async signDeleteThread({ id }) {
+    const { signature, signedData } = this.sign("deleteThread", id);
     return { signature }
   }
 
-  public async signComment(wallet: IWebWallet, { community, threadId, parentCommentId, text }) {
-    const { signature, sessionData, actionData, id } = this.sign(wallet, "comment", threadId, text, parentCommentId);
+  public async signComment({ community, threadId, parentCommentId, text }) {
+    const { signature, sessionData, actionData, id } = this.sign("comment", threadId, text, parentCommentId);
     return { signature, sessionData, actionData, id }
   }
 
-  public async signDeleteComment(wallet: IWebWallet, { id }) {
-    const { signature, signedData } = this.sign(wallet, "deleteComment", id);
+  public async signDeleteComment({ id }) {
+    const { signature, signedData } = this.sign("deleteComment", id);
     return { signature }
   }
 
-  public async signThreadReaction(wallet: IWebWallet, { threadId, like }) {
+  public async signThreadReaction({ threadId, like }) {
     const reaction = like ? "like" : "dislike";
-    const { signature, sessionData, actionData, id } = this.sign(wallet, "reactThread", reaction, threadId);
+    const { signature, sessionData, actionData, id } = this.sign("reactThread", reaction, threadId);
     return { signature, sessionData, actionData, id }
   }
 
-  public async signDeleteThreadReaction(wallet: IWebWallet, { id }) {
-    const { signature, signedData } = this.sign(wallet, "unreactThread", id);
+  public async signDeleteThreadReaction({ id }) {
+    const { signature, signedData } = this.sign("unreactThread", id);
     return { signature }
   }
 
-  public async signCommentReaction(wallet: IWebWallet, { commentId, like }) {
+  public async signCommentReaction({ commentId, like }) {
     const reaction = like ? "like" : "dislike";
-    const { signature, sessionData, actionData, id } = this.sign(wallet, "reactComment", reaction, commentId);
+    const { signature, sessionData, actionData, id } = this.sign("reactComment", reaction, commentId);
     return { signature, sessionData, actionData, id }
   }
 
-  public async signDeleteCommentReaction(wallet: IWebWallet, { id }) {
-    const { signature, signedData } = this.sign(wallet, "unreactComment", id);
+  public async signDeleteCommentReaction({ id }) {
+    const { signature, signedData } = this.sign("unreactComment", id);
     return { signature }
   }
 }

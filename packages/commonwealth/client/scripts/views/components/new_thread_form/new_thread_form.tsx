@@ -20,7 +20,6 @@ import { notifySuccess, notifyError } from 'controllers/app/notifications';
 import TopicGateCheck from 'controllers/chain/ethereum/gatedTopic';
 import { DraftParams } from 'controllers/server/drafts';
 import { confirmationModalWithText } from '../../modals/confirm_modal';
-import { sessionSigninModal } from '../../modals/session_signin_modal';
 import { EditProfileModal } from '../../modals/edit_profile_modal';
 import { TopicSelector } from '../topic_selector';
 import { QuillEditorComponent } from '../quill/quill_editor_component';
@@ -61,7 +60,7 @@ export class NewThreadForm implements m.ClassComponent<NewThreadFormAttrs> {
     quillEditorState.disable();
     checkNewThreadErrors(form, body);
 
-    await sessionSigninModal();
+    await app.sessions.ensureSessionIsValid();
     // TODO wallet
     const { signature, sessionData, actionData, id } = app.sessions.signThread(wallet, {
       community: app.activeChainId(),

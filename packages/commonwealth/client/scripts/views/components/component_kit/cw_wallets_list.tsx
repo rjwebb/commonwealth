@@ -183,7 +183,7 @@ export class CWWalletsList implements m.ClassComponent<WalletsListAttrs> {
         );
       const signature = await wallet.signWithAccount(account);
       await wallet.validateWithAccount(account, signature);
-      console.log('success', account, signature);
+      accountVerifiedCallback(account);
     }
 
     async function handleNormalWalletLogin(wallet, address) {
