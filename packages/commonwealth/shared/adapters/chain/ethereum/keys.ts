@@ -57,5 +57,6 @@ export const constructTypedMessage = async (fromAddress: string, fromChainId: nu
   return {
     msgParams: { types, primaryType: 'Message', domain, message } as any,
     sessionPayload: payload,
+    blockInfo: validationBlockInfo,
   };
 };

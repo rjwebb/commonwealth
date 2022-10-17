@@ -62,7 +62,7 @@ export class NewThreadForm implements m.ClassComponent<NewThreadFormAttrs> {
 
     await app.sessions.ensureSessionIsValid();
     // TODO wallet
-    const { signature, sessionData, actionData, id } = app.sessions.signThread(wallet, {
+    const { signature, sessionData, actionData, id } = app.sessions.signThread({
       community: app.activeChainId(),
       title: form.title,
       body,

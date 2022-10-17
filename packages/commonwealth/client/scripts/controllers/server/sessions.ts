@@ -12,7 +12,7 @@ import {
 // import { sessionPayloadType } from "@canvas-js/core";
 
 class SessionsController {
-  sessions: Record<string, { sessionPayload: SessionPayload | null, wallet: ethers.Wallet }>;
+  sessions: Record<string, { sessionPayload: SessionPayload | null, walletSigner: ethers.Wallet, blockInfo: object }>;
 
   constructor() {
     this.sessions = {}
@@ -28,16 +28,20 @@ class SessionsController {
 
   // Get the current session key for a chain.
   public getAddress(chainId: number): string | null {
-    return this.sessions[chainId]?.wallet.address;
+    return this.sessions[chainId]?.walletSigner.address;
   }
 
   // Create a new session key, which still needs to be signed by the user.
   public getOrCreateAddress(chainId: number): string {
     if (this.sessions[chainId]) {
-      return this.sessions[chainId].wallet.address;
+      return this.sessions[chainId].walletSigner.address;
     }
-    this.sessions[chainId] = { sessionPayload: null, wallet: ethers.Wallet.createRandom() };
-    return this.sessions[chainId].wallet.address;
+    this.sessions[chainId] = {
+      sessionPayload: null,
+      blockInfo: null,
+      walletSigner: ethers.Wallet.createRandom()
+    };
+    return this.sessions[chainId].walletSigner.address;
   }
 
   // Once the user has signed a session key, save the corresponding payload here.
@@ -45,9 +49,10 @@ class SessionsController {
   //
   // TODO: Also save the signature, and set `this.valid = true` after validating it.
   //
-  public updateSessionPayload(chainId: number, sessionPayload: SessionPayload) {
+  public updateSessionPayload(chainId: number, sessionPayload: SessionPayload, blockInfo: BlockInfo) {
     if (!this.sessions[chainId]) throw new Error("Invalid session! We should never get here");
     this.sessions[chainId].sessionPayload = sessionPayload;
+    this.sessions[chainId].blockInfo = blockInfo;
   }
 
   // Sign an arbitrary action. Always call ensureSessionIsValid() right before sign().
@@ -55,31 +60,40 @@ class SessionsController {
     sessionData: SessionPayload,
     actionData: ActionPayload
   }> {
+    if (args.some((arg) => arg === undefined)) {
+      throw new Error("args cannot be undefined")
+    }
     const chainId = app.chain?.meta.node.ethChainId || 1;
-    if (!this.sessions[chainId]?.wallet || !this.sessions[chainId]?.sessionPayload) throw new Error("Invalid signer");
+    if (!this.sessions[chainId]) throw new Error("Invalid signer");
+    const { walletSigner, sessionPayload, blockInfo } = this.sessions[chainId];
+    if (!walletSigner || !sessionPayload || !blockInfo) throw new Error("Invalid signer");
 
-    const blockInfo: BlockInfo = await wallet.getRecentBlock();
-		const timestamp = +Date.now(); // get a new timestamp, from after we have secured a session
 		const block: CanvasBlock = {
 			chain: "eth",
-			chainId: app.chain?.meta.node.ethChainId || 1,
+			chainId,
 			blocknum: blockInfo.number,
 			blockhash: blockInfo.hash,
 			timestamp: blockInfo.timestamp,
 		};
-    const sessionData: SessionPayload = this.sessions[chainId].sessionPayload;
-		const actionData: ActionPayload = { from: address, spec: multihash, call, args, timestamp, block };
-
-    const signatureData = getActionSignatureData(actionData);
-    const signature = await this.sessions[chainId].wallet._signTypedData(...signatureData);
+		const actionTimestamp = +Date.now();
+		const actionData: ActionPayload = {
+      from: sessionPayload.from,
+      spec: sessionPayload.spec,
+      call,
+      args,
+      timestamp: actionTimestamp,
+      block
+    };
+    const [domain, types, value] = getActionSignatureData(actionData);
+    const signature = await walletSigner._signTypedData(domain, types, value);
     const id = signature; // TODO: what's the returned ID of canvas objects?
-    return { signature, sessionData, actionData, id };
+    return { signature, sessionData: sessionPayload, actionData, id };
   }
 
   // public signer methods
 
   public async signThread({ community, title, body, link, topic }) {
-    const { signature, sessionData, actionData, id } = this.sign("thread", community, title, body, link, topic);
+    const { signature, sessionData, actionData, id } = this.sign("thread", community || '', title, body, link || '', topic || '');
     return { signature, sessionData, actionData, id }
   }
 

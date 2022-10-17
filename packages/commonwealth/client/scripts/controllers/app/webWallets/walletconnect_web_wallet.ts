@@ -52,20 +52,20 @@ class WalletConnectWebWalletController implements IWebWallet<string> {
     return signature;
   }
 
-  public async signLoginToken(validationBlockInfo: string): Promise<string> {
+  public async signLoginToken(blockInfoString: string): Promise<string> {
     const sessionPublicAddress = app.sessions.getOrCreateAddress(this._chainInfo.node.ethChainId);
     const chainId = this._chainInfo.node.ethChainId || 1;
-    const { msgParams, sessionPayload } = await constructTypedMessage(
+    const { msgParams, sessionPayload, blockInfo } = await constructTypedMessage(
       this.accounts[0],
       chainId,
       sessionPublicAddress,
-      validationBlockInfo,
+      blockInfoString,
     );
     const signature = await this._provider.wc.signTypedData([
       this.accounts[0],
       JSON.stringify(msgParams),
     ]);
-    app.sessions.updateSessionPayload(chainId, sessionPayload)
+    app.sessions.updateSessionPayload(chainId, sessionPayload, blockInfo)
     return signature;
   }
 

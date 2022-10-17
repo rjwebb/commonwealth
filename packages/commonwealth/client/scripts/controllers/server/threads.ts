@@ -306,7 +306,7 @@ class ThreadsController {
       throw new Error(
         err.responseJSON && err.responseJSON.error
           ? err.responseJSON.error
-          : 'Failed to create thread'
+          : err.message ? err.message : 'Failed to create thread'
       );
     }
   }
